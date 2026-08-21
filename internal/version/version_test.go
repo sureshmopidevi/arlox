@@ -3,7 +3,7 @@ package version_test
 import (
 	"testing"
 
-	"github.com/lt-sureshmopidevi/vibeit/internal/version"
+	"vibeit/internal/version"
 )
 
 func TestVersionNonEmpty(t *testing.T) {

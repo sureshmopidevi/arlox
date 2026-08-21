@@ -10,10 +10,10 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
-	"github.com/lt-sureshmopidevi/vibeit/internal/generate"
-	"github.com/lt-sureshmopidevi/vibeit/internal/ui"
-	"github.com/lt-sureshmopidevi/vibeit/internal/version"
-	"github.com/lt-sureshmopidevi/vibeit/internal/workspace"
+	"vibeit/internal/generate"
+	"vibeit/internal/ui"
+	"vibeit/internal/version"
+	"vibeit/internal/workspace"
 )
 
 // Execute builds and runs the root cobra command.
