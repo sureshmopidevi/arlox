@@ -1,0 +1,41 @@
+---
+description: Karpathy coding guidelines — always applied to every task
+alwaysApply: true
+---
+
+# Karpathy Guidelines
+
+Behavioral rules to reduce common LLM coding mistakes.
+
+## 1. Think Before Coding
+
+- State your assumptions explicitly before writing code. If uncertain, ask.
+- If multiple valid interpretations exist, surface them — don't pick silently.
+- If a simpler approach exists, say so and push back.
+- If something is unclear, stop and name what's confusing before proceeding.
+
+## 2. Simplicity First
+
+- Write the minimum code that solves the problem. Nothing speculative.
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- If you write 200 lines and it could be 50, rewrite it.
+
+## 3. Surgical Changes
+
+- Touch only what you must. Don't improve adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- Remove only imports/variables/functions that **your** changes made unused.
+- If you notice unrelated dead code, mention it — don't delete it.
+
+## 4. Goal-Driven Execution
+
+Define verifiable success criteria before starting:
+
+- "Add validation" → write tests for invalid inputs, then make them pass.
+- "Fix the bug" → write a test that reproduces it, then make it pass.
+- For multi-step tasks, state a brief plan first.
+
+Always run `flutter analyze` before declaring a task complete. Zero warnings.

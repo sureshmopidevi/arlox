@@ -1,0 +1,13 @@
+package routes
+
+import (
+	"github.com/gin-gonic/gin"
+
+	authHandler "[[.Module]]/modules/auth/handler"
+)
+
+func Register(api *gin.RouterGroup, h *authHandler.Handler, authMw gin.HandlerFunc) {
+	g := api.Group("/auth")
+	g.POST("/login", h.Login)
+	g.GET("/me", authMw, h.Me)
+}

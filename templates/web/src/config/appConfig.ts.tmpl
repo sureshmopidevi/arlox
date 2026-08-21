@@ -1,0 +1,6 @@
+import { envConfig } from './envConfig'
+
+export const appConfig = {
+  apiUrl: envConfig.apiUrl,
+  appName: '[[.DisplayName]]',
+} as const

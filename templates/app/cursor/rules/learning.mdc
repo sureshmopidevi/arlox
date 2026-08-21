@@ -1,0 +1,36 @@
+---
+description: Knowledge persistence rules — when and how to record learnings
+alwaysApply: false
+---
+
+# Learning Rules
+
+## Auto-Append Trigger
+
+After completing any feature or significant fix, append a concise entry to the relevant `learned/README.md`.
+
+## Entry Format
+
+```markdown
+## YYYY-MM-DD — <short title>
+**What**: one sentence describing what was done.
+**Why**: the reason this approach was chosen over alternatives.
+**Gotchas**: anything non-obvious a future agent should know.
+```
+
+## Scope
+
+| Work type | Append to |
+|-----------|-----------|
+| New feature | `.cursor/skills/add-feature/learned/README.md` |
+| Core change | `.cursor/skills/add-feature/learned/README.md` under a `### Core` sub-heading |
+| Deferred / risky change | Mark entry with `[PENDING]` — see `apply-pending` skill |
+
+## Gated Learn for `core/`
+
+Before modifying anything under `lib/core/`, read `learned/README.md` for prior decisions.  
+Do not change core abstractions without recording the rationale as a new `learned/` entry.
+
+## Deferred Learnings
+
+If a desired change is too risky to apply immediately, record it with `[PENDING]` at the start of the entry title. The `apply-pending` skill will pick these up later.

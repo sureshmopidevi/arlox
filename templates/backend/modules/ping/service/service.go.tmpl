@@ -1,0 +1,15 @@
+package service
+
+import pingRepo "[[.Module]]/modules/ping/repository"
+
+type Service struct {
+	repo *pingRepo.Repository
+}
+
+func New(repo *pingRepo.Repository) *Service {
+	return &Service{repo: repo}
+}
+
+func (s *Service) Ping() string {
+	return "pong"
+}

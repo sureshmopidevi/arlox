@@ -1,0 +1,33 @@
+# [[.DisplayName]] Backend — Agent Guide
+
+## Workflow
+
+- **Only use `make` targets** — never `go run ./...` ad-hoc.
+- After changes: `make test && make lint`.
+- Before adding a feature read `.cursor/skills/add-feature/SKILL.md`.
+
+## Architecture rules (non-negotiable)
+
+1. New domain → `modules/<name>/{handler,service,repository,routes}` only.
+2. Wire in `cmd/server/main.go` and `internal/server/router.go`.
+3. Handlers bind + respond only; all logic in service; GORM only in repository.
+4. JSON responses via `internal/response` package.
+5. No second DI framework, no second router, no second ORM.
+
+## Key files
+
+| File | Role |
+|------|------|
+| `cmd/server/main.go` | DI root: repo → service → handler → router |
+| `internal/server/router.go` | Route registration |
+| `internal/config/config.go` | Viper env config |
+| `internal/models/models.go` | GORM models |
+| `internal/seed/seed.go` | Seed data |
+| `internal/response/response.go` | JSON envelope |
+
+## Cursor skills
+
+- `.cursor/skills/add-feature/SKILL.md` — add a new module
+- `.cursor/skills/make-workflow/SKILL.md` — make targets reference
+- `.cursor/skills/learn/SKILL.md` — stage a learned patch
+- `.cursor/skills/apply-pending/SKILL.md` — promote pending patches

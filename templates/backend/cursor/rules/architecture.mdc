@@ -1,0 +1,26 @@
+---
+description: Backend architecture constraints — always apply
+alwaysApply: true
+---
+
+# Architecture Rules
+
+## Module structure
+New domain → `modules/<name>/{handler,service,repository,routes}` — no other layout.
+
+## Wiring
+Wire manually in `cmd/server/main.go`: `repo → service → handler`. Register routes in `internal/server/router.go`.
+
+## Layer responsibilities
+- **Handler**: bind request, call service, call `response.*`. No business logic.
+- **Service**: all business logic. No GORM, no `c *gin.Context`.
+- **Repository**: GORM only. Returns models or errors. No HTTP types.
+
+## Response envelope
+Always use `internal/response` — never `c.JSON` directly in handlers.
+
+## Constraints
+- No second router framework (only Gin).
+- No DI container framework (wire manually).
+- No second ORM (only GORM).
+- No global state except the logger.

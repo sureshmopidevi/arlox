@@ -1,0 +1,30 @@
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useAuthStore } from '@/stores/authStore'
+
+export function HomeHome() {
+  useDocumentTitle('[[.DisplayName]]')
+  const user = useAuthStore((s) => s.user)
+
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900">
+        Welcome to [[.DisplayName]]
+      </h1>
+      {user && (
+        <p className="mt-1 text-sm text-gray-500">
+          Signed in as{' '}
+          <span className="font-medium text-gray-700">{user.email}</span>
+        </p>
+      )}
+      <div className="mt-6 p-6 bg-white rounded-xl border border-gray-200 shadow-sm inline-block">
+        <p className="text-gray-600 text-sm">
+          Your admin console is ready. Add features using the{' '}
+          <code className="font-mono bg-gray-100 px-1 py-0.5 rounded text-xs">
+            add-feature
+          </code>{' '}
+          skill.
+        </p>
+      </div>
+    </div>
+  )
+}

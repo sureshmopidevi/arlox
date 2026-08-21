@@ -1,0 +1,55 @@
+# [[.DisplayName]] — Agent Instructions
+
+## Project
+
+| Key | Value |
+|-----|-------|
+| App | [[.DisplayName]] |
+| Package | `[[.Package]]` |
+| API base | `[[.APIURL]]` |
+| Org | [[.Org]] |
+
+## Non-negotiable Rules (read before touching any file)
+
+1. Run `flutter analyze` before finishing **any** task — zero warnings allowed.
+2. Follow `.cursor/rules/architecture.mdc` for all structural decisions.
+3. Follow `.cursor/rules/karpathy.mdc` for all coding behavior.
+4. Append a learning entry to `.cursor/skills/add-feature/learned/README.md` after every feature task.
+
+## Stack
+
+| Concern | Library |
+|---------|---------|
+| State | Riverpod 3 (`@riverpod` annotations) |
+| Routing | go_router |
+| Networking | Dio + AuthInterceptor |
+| Secure storage | flutter_secure_storage |
+| Logging | Talker |
+| UI | Material 3 — no custom tokens |
+
+## Key Files
+
+- `lib/main.dart` — entry point; `ProviderScope` wraps `MaterialApp.router`
+- `lib/core/router/app_router.dart` — GoRouter; add routes here
+- `lib/core/di/providers.dart` — app-wide singleton providers
+- `lib/core/network/dio_client.dart` — Dio + interceptors setup
+- `lib/core/constants/app_constants.dart` — compile-time constants (baseUrl, etc.)
+
+## Available Skills
+
+Read the skill file before invoking it.
+
+| Skill | Path | When to use |
+|-------|------|-------------|
+| add-feature | `.cursor/skills/add-feature/SKILL.md` | Add a new vertical feature slice |
+| dev-workflow | `.cursor/skills/dev-workflow/SKILL.md` | Run pub get / build_runner / analyze |
+| learn | `.cursor/skills/learn/SKILL.md` | Record a decision |
+| apply-pending | `.cursor/skills/apply-pending/SKILL.md` | Apply deferred learnings |
+
+## Dependency Flow
+
+```
+presentation → domain ← data
+core/ ← (imported anywhere)
+features must NOT import each other
+```

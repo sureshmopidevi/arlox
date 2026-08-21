@@ -1,0 +1,25 @@
+import axios from 'axios'
+import { appConfig } from '@/config/appConfig'
+import { unwrapData } from './unwrapData'
+import { handleApiError } from './handleApiError'
+
+export const apiClient = axios.create({
+  baseURL: appConfig.apiUrl,
+  headers: { 'Content-Type': 'application/json' },
+})
+
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth')
+  if (token) {
+    try {
+      const parsed = JSON.parse(token) as { state?: { token?: string } }
+      const jwt = parsed?.state?.token
+      if (jwt) config.headers.Authorization = `Bearer ${jwt}`
+    } catch {
+      // ignore malformed storage
+    }
+  }
+  return config
+})
+
+apiClient.interceptors.response.use(unwrapData, handleApiError)

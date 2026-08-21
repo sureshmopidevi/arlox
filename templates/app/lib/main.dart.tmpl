@@ -1,0 +1,22 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:[[.Package]]/core/router/app_router.dart';
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const ProviderScope(child: AppRoot()));
+}
+
+class AppRoot extends ConsumerWidget {
+  const AppRoot({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(goRouterProvider);
+    return MaterialApp.router(
+      title: '[[.DisplayName]]',
+      theme: ThemeData(useMaterial3: true),
+      routerConfig: router,
+    );
+  }
+}

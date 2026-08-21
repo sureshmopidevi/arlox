@@ -1,0 +1,23 @@
+---
+description: Make is the only workflow — always apply
+alwaysApply: true
+---
+
+# Makefile Workflow
+
+`make` is the only entry point for development tasks. Never use ad-hoc `go run`, `go build`, or `psql` directly.
+
+| Task | Command |
+|------|---------|
+| First-time setup | `make setup` |
+| Run dev server | `make run` |
+| Compile binary | `make build` |
+| Run tests | `make test` |
+| Lint | `make lint` |
+| Tidy dependencies | `make tidy` |
+| Check environment | `make doctor` |
+| Start Postgres | `make db-up` |
+| Create database | `make db-create` |
+
+After any code change: `make test` before declaring done.
+After any dependency change: `make tidy`.

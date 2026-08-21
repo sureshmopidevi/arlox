@@ -1,0 +1,55 @@
+package handler
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"[[.Module]]/internal/authjwt"
+	"[[.Module]]/internal/middleware"
+	"[[.Module]]/internal/response"
+	authSvc "[[.Module]]/modules/auth/service"
+)
+
+type Handler struct {
+	svc *authSvc.Service
+}
+
+func New(svc *authSvc.Service) *Handler {
+	return &Handler{svc: svc}
+}
+
+type loginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+func (h *Handler) Login(c *gin.Context) {
+	var req loginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Err(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	result, err := h.svc.Login(req.Email, req.Password)
+	if err != nil {
+		response.Err(c, http.StatusUnauthorized, err.Error())
+		return
+	}
+	response.OK(c, http.StatusOK, gin.H{
+		"token": result.Token,
+		"user":  gin.H{"id": result.User.ID, "email": result.User.Email, "name": result.User.Name},
+	})
+}
+
+func (h *Handler) Me(c *gin.Context) {
+	claims, _ := c.Get(middleware.ClaimsKey)
+	jwtClaims := claims.(*authjwt.Claims)
+	user, err := h.svc.Me(jwtClaims.UserID)
+	if err != nil {
+		response.Err(c, http.StatusNotFound, "user not found")
+		return
+	}
+	response.OK(c, http.StatusOK, gin.H{
+		"id": user.ID, "email": user.Email, "name": user.Name, "role": user.Role,
+	})
+}

@@ -1,0 +1,38 @@
+APP     := [[.Name]]
+BIN     := bin/$(APP)
+PKG     := [[.Module]]/cmd/server
+DB_NAME := $(subst -,_,[[.Name]])
+
+.PHONY: setup run build test lint tidy doctor db-up db-create
+
+setup: db-up db-create tidy
+	@cp -n configs/local/app.env.example configs/local/app.env 2>/dev/null || true
+	@echo "Setup complete. Edit configs/local/app.env then: make run"
+
+run:
+	@go run ./cmd/server -env configs/local/app.env
+
+build:
+	@go build -o $(BIN) ./cmd/server
+
+test:
+	@go test ./... -count=1
+
+lint:
+	@which golangci-lint >/dev/null 2>&1 || (echo "Install: brew install golangci-lint" && exit 1)
+	@golangci-lint run ./...
+
+tidy:
+	@go mod tidy
+
+doctor:
+	@echo "=== go ===" && go version
+	@echo "=== postgres ===" && psql --version
+	@echo "=== golangci-lint ===" && golangci-lint version 2>/dev/null || echo "not installed"
+	@echo "=== env file ===" && (test -f configs/local/app.env && echo "OK" || echo "MISSING — run: make setup")
+
+db-up:
+	@brew services start postgresql@16 2>/dev/null || brew services start postgresql 2>/dev/null || true
+
+db-create:
+	@createdb $(DB_NAME) 2>/dev/null && echo "Created DB: $(DB_NAME)" || echo "DB already exists: $(DB_NAME)"

@@ -1,0 +1,21 @@
+package response
+
+import "github.com/gin-gonic/gin"
+
+type envelope struct {
+	Data  any    `json:"data,omitempty"`
+	Meta  any    `json:"meta,omitempty"`
+	Error string `json:"error,omitempty"`
+}
+
+func OK(c *gin.Context, status int, data any) {
+	c.JSON(status, envelope{Data: data})
+}
+
+func WithMeta(c *gin.Context, status int, data any, meta any) {
+	c.JSON(status, envelope{Data: data, Meta: meta})
+}
+
+func Err(c *gin.Context, status int, msg string) {
+	c.AbortWithStatusJSON(status, envelope{Error: msg})
+}

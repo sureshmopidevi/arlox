@@ -1,0 +1,47 @@
+import 'package:dio/dio.dart';
+import 'package:talker_dio_logger/talker_dio_logger.dart';
+import 'package:[[.Package]]/core/constants/app_constants.dart';
+import 'package:[[.Package]]/core/errors/api_exception.dart';
+import 'package:[[.Package]]/core/logging/talker_instance.dart';
+import 'package:[[.Package]]/core/storage/secure_storage_service.dart';
+import 'package:[[.Package]]/core/network/interceptors/auth_interceptor.dart';
+
+class DioClient {
+  DioClient({required SecureStorageService storage}) {
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: AppConstants.baseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+        headers: {'Content-Type': 'application/json'},
+      ),
+    );
+    _dio.interceptors.add(AuthInterceptor(storage: storage));
+    _dio.interceptors.add(
+      TalkerDioLogger(
+        talker: talker,
+        settings: const TalkerDioLoggerSettings(
+          printRequestHeaders: false,
+          printResponseHeaders: false,
+        ),
+      ),
+    );
+  }
+
+  late final Dio _dio;
+
+  Dio get dio => _dio;
+
+  static ApiException mapError(Object error) {
+    if (error is DioException) {
+      final status = error.response?.statusCode;
+      String message = error.message ?? 'Request failed';
+      final data = error.response?.data;
+      if (data is Map && data['error'] != null) {
+        message = data['error'].toString();
+      }
+      return ApiException(message: message, statusCode: status);
+    }
+    return ApiException(message: error.toString());
+  }
+}

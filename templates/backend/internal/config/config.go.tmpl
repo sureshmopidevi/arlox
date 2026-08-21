@@ -1,0 +1,48 @@
+package config
+
+import (
+	"strings"
+
+	"github.com/spf13/viper"
+)
+
+type Config struct {
+	ServerPort int    `mapstructure:"SERVER_PORT"`
+	ServerEnv  string `mapstructure:"SERVER_ENV"`
+
+	DBHost     string `mapstructure:"DB_HOST"`
+	DBPort     int    `mapstructure:"DB_PORT"`
+	DBUser     string `mapstructure:"DB_USER"`
+	DBPassword string `mapstructure:"DB_PASSWORD"`
+	DBName     string `mapstructure:"DB_NAME"`
+	DBSSLMode  string `mapstructure:"DB_SSLMODE"`
+
+	JWTSecret      string `mapstructure:"JWT_SECRET"`
+	JWTExpiryHours int    `mapstructure:"JWT_EXPIRY_HOURS"`
+}
+
+func Load(envFile string) *Config {
+	v := viper.New()
+	v.SetConfigFile(envFile)
+	v.SetConfigType("env")
+	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// defaults
+	v.SetDefault("SERVER_PORT", 8080)
+	v.SetDefault("SERVER_ENV", "development")
+	v.SetDefault("DB_HOST", "localhost")
+	v.SetDefault("DB_PORT", 5432)
+	v.SetDefault("DB_SSLMODE", "disable")
+	v.SetDefault("JWT_EXPIRY_HOURS", 24)
+
+	if err := v.ReadInConfig(); err != nil {
+		panic("config: " + err.Error())
+	}
+
+	var cfg Config
+	if err := v.Unmarshal(&cfg); err != nil {
+		panic("config unmarshal: " + err.Error())
+	}
+	return &cfg
+}

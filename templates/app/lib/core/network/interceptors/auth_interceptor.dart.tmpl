@@ -1,0 +1,21 @@
+import 'package:dio/dio.dart';
+import 'package:[[.Package]]/core/storage/secure_storage_service.dart';
+
+/// Attaches Bearer tokens when present. Extend with refresh later.
+class AuthInterceptor extends Interceptor {
+  AuthInterceptor({required this.storage});
+
+  final SecureStorageService storage;
+
+  @override
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    final token = await storage.getAccessToken();
+    if (token != null && token.isNotEmpty) {
+      options.headers['Authorization'] = 'Bearer $token';
+    }
+    handler.next(options);
+  }
+}

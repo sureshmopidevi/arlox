@@ -1,0 +1,56 @@
+---
+description: Architecture conventions for this Flutter project
+alwaysApply: false
+globs:
+  - "lib/**/*.dart"
+---
+
+# Architecture Rules
+
+## Directory Layout
+
+```
+lib/
+  core/                         # Shared infrastructure — importable anywhere
+    constants/                  # Compile-time constants (AppConstants)
+    di/                         # App-wide Riverpod providers (providers.dart)
+    errors/                     # Shared exception types (ApiException)
+    logging/                    # Talker singleton
+    network/                    # DioClient + interceptors
+    router/                     # GoRouter definition (appRouterProvider)
+    storage/                    # SecureStorageService
+  features/<name>/              # Vertical slice — one folder per feature
+    data/
+      datasources/              # Remote & local data sources (Dio calls, cache)
+      models/                   # JSON-serializable DTOs (fromJson / toJson)
+      repositories/             # Repository implementations
+    domain/
+      entities/                 # Plain Dart classes — no framework dependencies
+      repositories/             # Abstract repository interfaces
+      usecases/                 # Single-responsibility use cases (one `call` method)
+    presentation/
+      screens/                  # Full screens (Scaffold + AppBar)
+      widgets/                  # Feature-scoped widgets
+      providers/                # Feature-scoped @riverpod providers
+  shared/
+    widgets/                    # Reusable widgets — no feature coupling
+```
+
+## Hard Rules
+
+1. **Riverpod 3 only** for state — no Bloc, no get_it, no Provider, no ChangeNotifier.
+2. **Dio only** for networking — no `http` package.
+3. **go_router only** for navigation — no Navigator.push calls in business logic.
+4. **No design tokens** — use `ThemeData(useMaterial3: true)` defaults; no custom token files.
+5. **Dependency flow**: `presentation → domain ← data`. Data and presentation never import each other.
+6. `core/` may be imported by anyone. Features must **not** import each other directly.
+7. App-wide singletons live in `core/di/providers.dart`. Feature-scoped providers live in `features/<name>/presentation/providers/`.
+8. Use `@Riverpod(keepAlive: true)` only for true singletons (DioClient, SecureStorage, GoRouter). Feature providers are auto-disposed by default.
+
+## Adding a New Feature
+
+Use the `add-feature` skill (`.cursor/skills/add-feature/SKILL.md`).
+
+## Modifying `core/`
+
+Check `.cursor/skills/add-feature/learned/README.md` for prior decisions first. Record the rationale for any core change as a new entry.

@@ -1,0 +1,39 @@
+package seed
+
+import (
+	"errors"
+
+	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+
+	"[[.Module]]/internal/models"
+)
+
+func Run(db *gorm.DB, log *zap.Logger) error {
+	var existing models.User
+	err := db.Where("email = ?", "admin@example.com").First(&existing).Error
+	if err == nil {
+		return nil // already seeded
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	admin := models.User{
+		Name:         "Admin",
+		Email:        "admin@example.com",
+		PasswordHash: string(hash),
+		Role:         "admin",
+	}
+	if err := db.Create(&admin).Error; err != nil {
+		return err
+	}
+	log.Sugar().Info("seed: admin user created")
+	return nil
+}

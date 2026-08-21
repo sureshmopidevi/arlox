@@ -1,0 +1,45 @@
+package service
+
+import (
+	"errors"
+
+	"golang.org/x/crypto/bcrypt"
+
+	"[[.Module]]/internal/authjwt"
+	"[[.Module]]/internal/config"
+	"[[.Module]]/internal/models"
+	authRepo "[[.Module]]/modules/auth/repository"
+)
+
+type Service struct {
+	repo *authRepo.Repository
+	cfg  *config.Config
+}
+
+func New(repo *authRepo.Repository, cfg *config.Config) *Service {
+	return &Service{repo: repo, cfg: cfg}
+}
+
+type LoginResult struct {
+	Token string
+	User  *models.User
+}
+
+func (s *Service) Login(email, password string) (*LoginResult, error) {
+	user, err := s.repo.FindByEmail(email)
+	if err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+	token, err := authjwt.Sign(user.ID, user.Email, s.cfg.JWTSecret, s.cfg.JWTExpiryHours)
+	if err != nil {
+		return nil, err
+	}
+	return &LoginResult{Token: token, User: user}, nil
+}
+
+func (s *Service) Me(userID uint) (*models.User, error) {
+	return s.repo.FindByID(userID)
+}

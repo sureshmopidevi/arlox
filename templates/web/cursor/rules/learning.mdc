@@ -1,0 +1,30 @@
+---
+description: Learning and knowledge capture system
+---
+
+# Learning
+
+## After adding a feature
+
+Run `.cursor/skills/learn/SKILL.md` to capture what was learned.
+Append an entry to `.cursor/skills/add-feature/learned/README.md`.
+
+## Gated learning
+
+- Modifying core files (`src/api/`, `src/stores/`, `src/app/`, `src/layouts/`) requires
+  checking `learned/README.md` for prior lessons first.
+- If a lesson covers the area you're changing, apply it or explicitly note why not.
+
+## Learned index
+
+`.cursor/skills/add-feature/learned/README.md` is the index.
+Format per entry:
+
+```
+## YYYY-MM-DD — <Feature Name>
+
+**Pattern:** <one-line description>
+**Files touched:** list
+**Key decisions:** bullet list
+**Pitfalls:** bullet list
+```

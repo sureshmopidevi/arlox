@@ -1,0 +1,39 @@
+package database
+
+import (
+	"fmt"
+
+	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
+
+	"[[.Module]]/internal/config"
+	"[[.Module]]/internal/models"
+)
+
+func Connect(cfg *config.Config, log *zap.Logger) *gorm.DB {
+	dsn := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode,
+	)
+
+	level := gormLogger.Warn
+	if cfg.ServerEnv != "production" {
+		level = gormLogger.Info
+	}
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: gormLogger.Default.LogMode(level),
+	})
+	if err != nil {
+		log.Sugar().Fatalf("database connect: %v", err)
+	}
+
+	if err := db.AutoMigrate(&models.User{}); err != nil {
+		log.Sugar().Fatalf("automigrate: %v", err)
+	}
+
+	log.Sugar().Info("database connected")
+	return db
+}

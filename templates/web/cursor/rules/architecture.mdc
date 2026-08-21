@@ -1,0 +1,46 @@
+---
+description: Architecture and code organisation conventions
+globs:
+  - "src/**/*.{ts,tsx}"
+---
+
+# Architecture
+
+## Feature structure
+
+All feature code lives in `src/features/<name>/`:
+
+```
+src/features/<name>/
+  api/        API call functions (use apiClient)
+  components/ React components for this feature
+  hooks/      Custom hooks (useQuery, useMutation wrappers)
+  types.ts    TypeScript interfaces for this feature
+```
+
+## Pages are thin
+
+`src/pages/<Name>Page.tsx` imports from features and returns them.
+No business logic, no API calls, no state in pages.
+
+## API
+
+- All HTTP calls go through `src/api/client.ts` (axios instance).
+- The client auto-unwraps `{ data: ... }` envelopes via interceptors.
+- Each feature's `api/` folder exports typed async functions.
+
+## Auth
+
+- Auth state in `useAuthStore` (Zustand, persisted to localStorage).
+- Never store tokens in component state or context.
+- Protected routes use `<ProtectedRoute />` — redirects to `/login` if no token.
+- Logout: call `clearAuth()`, then `navigate('/login', { replace: true })`.
+
+## Styling
+
+- Tailwind utility classes only. See `tailwind.mdc`.
+
+## Router
+
+- Routes defined in `src/app/router.tsx`.
+- Nav links added in `src/layouts/AdminSidebar.tsx`.

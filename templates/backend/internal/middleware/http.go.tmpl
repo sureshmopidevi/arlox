@@ -1,0 +1,29 @@
+package middleware
+
+import (
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+)
+
+func Logger(log *zap.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		log.Sugar().Infow("request",
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"status", c.Writer.Status(),
+			"latency", time.Since(start),
+			"ip", c.ClientIP(),
+		)
+	}
+}
+
+func Recovery(log *zap.Logger) gin.HandlerFunc {
+	return gin.RecoveryWithWriter(nil, func(c *gin.Context, err any) {
+		log.Sugar().Errorw("panic recovered", "err", err)
+		c.AbortWithStatus(500)
+	})
+}

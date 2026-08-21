@@ -1,0 +1,21 @@
+---
+description: How to capture and apply learnings — always apply
+alwaysApply: true
+---
+
+# Learning Protocol
+
+## After adding a feature
+1. Complete the feature (passes `make test`).
+2. Append a concise note to `.cursor/skills/add-feature/learned/<feature>.md`.
+3. Update `.cursor/skills/add-feature/learned/README.md` index.
+
+## When making an architecture correction
+1. Run `.cursor/skills/learn/SKILL.md` to stage a patch under `.cursor/skills/.pending/`.
+2. Review staged patches with `.cursor/skills/apply-pending/SKILL.md`.
+3. Apply approved patches to the live skill/rule files.
+
+## Rules
+- Never rewrite the canonical `SKILL.md` files with feature-specific details.
+- Keep `learned/` files short (≤ 30 lines each).
+- One learned file per feature, named `<feature>.md`.

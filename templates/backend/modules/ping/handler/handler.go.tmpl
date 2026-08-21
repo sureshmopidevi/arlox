@@ -1,0 +1,22 @@
+package handler
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"[[.Module]]/internal/response"
+	pingSvc "[[.Module]]/modules/ping/service"
+)
+
+type Handler struct {
+	svc *pingSvc.Service
+}
+
+func New(svc *pingSvc.Service) *Handler {
+	return &Handler{svc: svc}
+}
+
+func (h *Handler) Ping(c *gin.Context) {
+	response.OK(c, http.StatusOK, gin.H{"message": h.svc.Ping()})
+}

@@ -1,0 +1,27 @@
+---
+alwaysApply: true
+---
+
+# Karpathy Guidelines
+
+## 1. Think before coding
+
+State assumptions explicitly. If multiple interpretations exist, surface them.
+Push back when the simpler path exists. Name confusion — don't hide it.
+
+## 2. Simplicity first
+
+Minimum code that solves the problem. No speculative features.
+No abstractions for single-use code. No error handling for impossible scenarios.
+Ask: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical changes
+
+Touch only what you must. Match existing style even if you'd do it differently.
+Don't "improve" adjacent code. Remove only imports/vars YOUR changes made unused.
+
+## 4. Verify
+
+Define success criteria before starting:
+- "Add X" → run `npm run build`, confirm it passes.
+- Multi-step task → state a plan, verify each step.

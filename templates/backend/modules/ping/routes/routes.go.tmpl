@@ -1,0 +1,11 @@
+package routes
+
+import (
+	"github.com/gin-gonic/gin"
+
+	pingHandler "[[.Module]]/modules/ping/handler"
+)
+
+func Register(api *gin.RouterGroup, h *pingHandler.Handler) {
+	api.GET("/ping", h.Ping)
+}

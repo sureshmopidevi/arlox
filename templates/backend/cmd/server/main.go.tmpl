@@ -1,0 +1,76 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"[[.Module]]/internal/config"
+	"[[.Module]]/internal/database"
+	"[[.Module]]/internal/logger"
+	"[[.Module]]/internal/seed"
+	"[[.Module]]/internal/server"
+	authHandler "[[.Module]]/modules/auth/handler"
+	authRepo "[[.Module]]/modules/auth/repository"
+	authService "[[.Module]]/modules/auth/service"
+	pingHandler "[[.Module]]/modules/ping/handler"
+	pingRepo "[[.Module]]/modules/ping/repository"
+	pingService "[[.Module]]/modules/ping/service"
+)
+
+func main() {
+	envFile := flag.String("env", "configs/local/app.env", "path to env file")
+	flag.Parse()
+
+	cfg := config.Load(*envFile)
+	log := logger.New(cfg.ServerEnv)
+	defer log.Sync() //nolint:errcheck
+
+	db := database.Connect(cfg, log)
+
+	if err := seed.Run(db, log); err != nil {
+		log.Sugar().Fatalf("seed: %v", err)
+	}
+
+	// DI: repo → service → handler
+	pRepo := pingRepo.New(db)
+	pSvc := pingService.New(pRepo)
+	pHandler := pingHandler.New(pSvc)
+
+	aRepo := authRepo.New(db)
+	aSvc := authService.New(aRepo, cfg)
+	aHandler := authHandler.New(aSvc)
+
+	r := server.NewRouter(cfg, log, pHandler, aHandler)
+
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.ServerPort),
+		Handler:      r,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	go func() {
+		log.Sugar().Infof("server listening on :%d", cfg.ServerPort)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Sugar().Fatalf("listen: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Sugar().Errorf("shutdown: %v", err)
+	}
+	log.Sugar().Info("server stopped")
+}

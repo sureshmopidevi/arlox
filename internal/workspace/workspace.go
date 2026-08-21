@@ -1,0 +1,242 @@
+package workspace
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
+)
+
+// Stack identifies a project stack.
+type Stack string
+
+const (
+	Backend Stack = "backend"
+	Web     Stack = "web"
+	App     Stack = "app"
+)
+
+var allStacks = []Stack{Backend, Web, App}
+
+var stackMarkers = map[Stack]string{
+	Backend: "go.mod",
+	Web:     "package.json",
+	App:     "pubspec.yaml",
+}
+
+// workspaceFile mirrors the .code-workspace JSON format.
+type workspaceFile struct {
+	Folders    []workspaceFolder `json:"folders"`
+	Settings   map[string]any    `json:"settings,omitempty"`
+	Extensions *workspaceExts    `json:"extensions,omitempty"`
+}
+
+type workspaceFolder struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+type workspaceExts struct {
+	Recommendations []string `json:"recommendations"`
+}
+
+var nameRe = regexp.MustCompile(`^[a-z0-9-]+$`)
+
+// ValidateName returns an error if name is not lowercase [a-z0-9-]+.
+func ValidateName(name string) error {
+	if name == "" {
+		return fmt.Errorf("name cannot be empty")
+	}
+	if !nameRe.MatchString(name) {
+		return fmt.Errorf("name must contain only lowercase letters, numbers, and hyphens")
+	}
+	return nil
+}
+
+// DetectWorkspace returns the root path if a *.code-workspace file exists in cwd.
+func DetectWorkspace(cwd string) (string, bool) {
+	entries, err := os.ReadDir(cwd)
+	if err != nil {
+		return "", false
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".code-workspace") {
+			return cwd, true
+		}
+	}
+	return "", false
+}
+
+// FindWorkspaceFile returns the path to the *.code-workspace file in root, or "".
+func FindWorkspaceFile(root string) string {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return ""
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".code-workspace") {
+			return filepath.Join(root, e.Name())
+		}
+	}
+	return ""
+}
+
+// StackExists reports whether the stack directory contains its marker file.
+func StackExists(root string, stack Stack) bool {
+	marker := stackMarkers[stack]
+	if marker == "" {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(root, string(stack), marker))
+	return err == nil
+}
+
+// StackPresentButEmpty reports whether the stack dir exists but has no marker file.
+func StackPresentButEmpty(root string, stack Stack) bool {
+	dir := filepath.Join(root, string(stack))
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+	return !StackExists(root, stack)
+}
+
+// EnsureWorkspace creates the workspace dir and writes an initial .code-workspace if missing.
+func EnsureWorkspace(root, name string) error {
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		return err
+	}
+	wsFile := filepath.Join(root, name+".code-workspace")
+	if _, err := os.Stat(wsFile); os.IsNotExist(err) {
+		return WriteWorkspaceFile(wsFile, name, nil)
+	}
+	return nil
+}
+
+// WriteWorkspaceFile writes a fresh .code-workspace JSON file.
+func WriteWorkspaceFile(path, name string, folders []string) error {
+	wf := workspaceFile{
+		Settings: map[string]any{
+			"files.exclude": map[string]any{"**/.dart_tool": true},
+		},
+		Extensions: &workspaceExts{
+			Recommendations: []string{
+				"golang.go",
+				"dart-code.flutter",
+				"dbaeumer.vscode-eslint",
+			},
+		},
+	}
+	for _, f := range folders {
+		wf.Folders = append(wf.Folders, workspaceFolder{Name: f, Path: f})
+	}
+	data, err := json.MarshalIndent(wf, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o644)
+}
+
+// ReadWorkspaceFolders returns the folder paths listed in the workspace file.
+func ReadWorkspaceFolders(wsPath string) []string {
+	data, err := os.ReadFile(wsPath)
+	if err != nil {
+		return nil
+	}
+	var wf workspaceFile
+	if err := json.Unmarshal(data, &wf); err != nil {
+		return nil
+	}
+	folders := make([]string, 0, len(wf.Folders))
+	for _, f := range wf.Folders {
+		folders = append(folders, f.Path)
+	}
+	return folders
+}
+
+// ListPresentStacks returns stack folder names that exist under root.
+func ListPresentStacks(root string) []string {
+	var present []string
+	for _, s := range allStacks {
+		if StackExists(root, s) {
+			present = append(present, string(s))
+		}
+	}
+	return present
+}
+
+// SyncWorkspaceFolders ensures every present stack folder is listed in the workspace file.
+func SyncWorkspaceFolders(wsPath, root string) error {
+	return MergeWorkspaceFolders(wsPath, ListPresentStacks(root))
+}
+
+// MergeWorkspaceFolders adds any new folders into the workspace file (union).
+func MergeWorkspaceFolders(wsPath string, newFolders []string) error {
+	data, err := os.ReadFile(wsPath)
+	if err != nil {
+		return err
+	}
+	var wf workspaceFile
+	if err := json.Unmarshal(data, &wf); err != nil {
+		return err
+	}
+
+	seen := make(map[string]bool)
+	for _, f := range wf.Folders {
+		seen[f.Path] = true
+	}
+	for _, f := range newFolders {
+		if !seen[f] {
+			wf.Folders = append(wf.Folders, workspaceFolder{Name: f, Path: f})
+			seen[f] = true
+		}
+	}
+
+	out, err := json.MarshalIndent(wf, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(wsPath, out, 0o644)
+}
+
+// IsUnrelatedDir reports whether path is a non-empty directory without a .code-workspace.
+func IsUnrelatedDir(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil || len(entries) == 0 {
+		return false
+	}
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".code-workspace") {
+			return false
+		}
+	}
+	return true
+}
+
+// InitGit runs git init in dir if no .git directory is present.
+func InitGit(dir string) error {
+	if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+		return nil
+	}
+	cmd := exec.Command("git", "init")
+	cmd.Dir = dir
+	return cmd.Run()
+}
+
+// ListMissingStacks returns stacks that don't yet have their marker file.
+func ListMissingStacks(root string) []Stack {
+	var missing []Stack
+	for _, s := range allStacks {
+		if !StackExists(root, s) {
+			missing = append(missing, s)
+		}
+	}
+	return missing
+}
