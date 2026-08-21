@@ -11,8 +11,8 @@ import (
 	"strings"
 	"text/template"
 
-	tmplfs "vibeit/templates"
-	"vibeit/internal/workspace"
+	tmplfs "github.com/sureshmopidevi/vibeit/templates"
+	"github.com/sureshmopidevi/vibeit/internal/workspace"
 )
 
 // Data holds the template variables for all stacks.

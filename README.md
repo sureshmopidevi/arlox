@@ -2,14 +2,27 @@
 
 Scaffold multi-stack workspaces with **Cursor rules and skills** baked in.
 
-## Install (one command)
+## Installation
+
+### Option 1: Go Install (Recommended for external users — no git clone needed)
+
+If you have Go 1.22+ installed:
 
 ```bash
+go install github.com/sureshmopidevi/vibeit/cmd/vibeit@latest
+```
+
+Make sure `~/go/bin` is in your `PATH` (e.g. `export PATH="$HOME/go/bin:$PATH"` in your `~/.zshrc` or `~/.bashrc`).
+
+### Option 2: From Source (For contributors / local development)
+
+```bash
+git clone https://github.com/sureshmopidevi/vibeit.git ~/vibeit
 cd ~/vibeit
 source ./install.sh
 ```
 
-That builds, installs to `~/go/bin`, adds Go bin to `~/.zshrc`, and makes `vibeit` work **immediately** in your current terminal.
+This builds, installs to `~/go/bin`, ensures Go bin is in `~/.zshrc`, and makes `vibeit` available immediately in your current terminal session.
 
 Then create a project:
 

@@ -10,11 +10,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"vibeit/internal/ui"
-	"vibeit/internal/version"
+	"github.com/sureshmopidevi/vibeit/internal/ui"
+	"github.com/sureshmopidevi/vibeit/internal/version"
 )
 
-const vibeitModule = "vibeit"
+const vibeitModule = "github.com/sureshmopidevi/vibeit"
 
 func upgradeCmd() *cobra.Command {
 	var (

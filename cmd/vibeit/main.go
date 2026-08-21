@@ -1,6 +1,6 @@
 package main
 
-import "vibeit/internal/cli"
+import "github.com/sureshmopidevi/vibeit/internal/cli"
 
 func main() {
 	cli.Execute()

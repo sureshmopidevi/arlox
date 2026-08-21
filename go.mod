@@ -1,4 +1,4 @@
-module vibeit
+module github.com/sureshmopidevi/vibeit
 
 go 1.26.6
 

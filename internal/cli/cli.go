@@ -10,10 +10,10 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
-	"vibeit/internal/generate"
-	"vibeit/internal/ui"
-	"vibeit/internal/version"
-	"vibeit/internal/workspace"
+	"github.com/sureshmopidevi/vibeit/internal/generate"
+	"github.com/sureshmopidevi/vibeit/internal/ui"
+	"github.com/sureshmopidevi/vibeit/internal/version"
+	"github.com/sureshmopidevi/vibeit/internal/workspace"
 )
 
 // Execute builds and runs the root cobra command.
@@ -178,7 +178,7 @@ type stackResult struct {
 	failed  []string
 }
 
-func runStacks(root string, stacks []workspace.Stack, data generate.Data) stackResult {
+func executeStacks(root string, stacks []workspace.Stack, data generate.Data) stackResult {
 	var r stackResult
 	for _, s := range stacks {
 		if workspace.StackExists(root, s) {
@@ -239,6 +239,66 @@ func tryOpen(wsFile string) string {
 	return ""
 }
 
+// generateOpts captures the options for the shared generate workflow.
+type generateOpts struct {
+	action     string // "created" or "updated"
+	relativeCD bool   // true for add (already inside workspace)
+}
+
+// runGenerate is the shared orchestration for create and add: select stacks,
+// generate them, sync the workspace file, and print the summary.
+func runGenerate(root, name string, f stackFlags, opts generateOpts) error {
+	data := buildData(name, f)
+	missing := workspace.ListMissingStacks(root)
+
+	stacks := selectedStacks(f)
+	if len(stacks) == 0 {
+		var err error
+		stacks, err = promptStacks(missing)
+		if err != nil {
+			return err
+		}
+		if len(stacks) == 0 {
+			wsFile := workspace.FindWorkspaceFile(root)
+			if wsFile != "" {
+				if err := workspace.SyncWorkspaceFolders(wsFile, root); err != nil {
+					ui.Error("failed to update workspace file: " + err.Error())
+					return err
+				}
+			}
+			ui.Dim("nothing selected — workspace folder is ready for vibeit add")
+			return nil
+		}
+	}
+
+	result := executeStacks(root, stacks, data)
+
+	wsFile := workspace.FindWorkspaceFile(root)
+	if wsFile != "" {
+		if err := workspace.SyncWorkspaceFolders(wsFile, root); err != nil {
+			ui.Error("failed to update workspace file: " + err.Error())
+			return err
+		}
+	}
+
+	openCmd := ""
+	if f.open && wsFile != "" {
+		openCmd = tryOpen(wsFile)
+	}
+
+	ui.Summary(ui.SummaryOpts{
+		Action:     opts.action,
+		Name:       name,
+		Root:       root,
+		Stacks:     result.created,
+		Skipped:    result.skipped,
+		Failed:     result.failed,
+		OpenCmd:    openCmd,
+		RelativeCD: opts.relativeCD,
+	})
+	return nil
+}
+
 func runCreate(args []string, f stackFlags) error {
 	name := ""
 	if len(args) > 0 {
@@ -269,58 +329,14 @@ func runCreate(args []string, f stackFlags) error {
 	ui.Header("create", name)
 	ui.WorkspaceInfo(target, filepath.Join(target, name+".code-workspace"))
 
-	data := buildData(name, f)
-
 	if err := workspace.EnsureWorkspace(target, name); err != nil {
 		return err
 	}
-	if err := generate.WorkspaceRoot(target, data); err != nil {
+	if err := generate.WorkspaceRoot(target, buildData(name, f)); err != nil {
 		return err
 	}
 
-	stacks := selectedStacks(f)
-	if len(stacks) == 0 {
-		stacks, err = promptStacks(workspace.ListMissingStacks(target))
-		if err != nil {
-			return err
-		}
-		if len(stacks) == 0 {
-			wsFile := workspace.FindWorkspaceFile(target)
-			if wsFile != "" {
-				if err := workspace.SyncWorkspaceFolders(wsFile, target); err != nil {
-					ui.Error("failed to update workspace file: " + err.Error())
-					return err
-				}
-			}
-			ui.Dim("nothing selected — workspace folder is ready for vibeit add")
-			return nil
-		}
-	}
-
-	result := runStacks(target, stacks, data)
-
-	wsFile := workspace.FindWorkspaceFile(target)
-	if wsFile != "" {
-		if err := workspace.SyncWorkspaceFolders(wsFile, target); err != nil {
-			ui.Error("failed to update workspace file: " + err.Error())
-			return err
-		}
-	}
-
-	openCmd := ""
-	if f.open && wsFile != "" {
-		openCmd = tryOpen(wsFile)
-	}
-
-	ui.Summary(ui.SummaryOpts{
-		Name:    name,
-		Root:    target,
-		Stacks:  result.created,
-		Skipped: result.skipped,
-		Failed:  result.failed,
-		OpenCmd: openCmd,
-	})
-	return nil
+	return runGenerate(target, name, f, generateOpts{action: "created"})
 }
 
 func resolveOutDir(cwd, out string) string {
@@ -360,50 +376,12 @@ func addCmd() *cobra.Command {
 
 			ui.Header("add", name)
 
-			data := buildData(name, f)
-			missing := workspace.ListMissingStacks(root)
-			if len(missing) == 0 {
+			if len(workspace.ListMissingStacks(root)) == 0 {
 				ui.Dim("all stacks already exist")
 				return nil
 			}
 
-			stacks := selectedStacks(f)
-			if len(stacks) == 0 {
-				stacks, err = promptStacks(missing)
-				if err != nil {
-					return err
-				}
-				if len(stacks) == 0 {
-					ui.Dim("nothing selected")
-					return nil
-				}
-			}
-
-			result := runStacks(root, stacks, data)
-
-			if wsFile != "" {
-				if err := workspace.SyncWorkspaceFolders(wsFile, root); err != nil {
-					ui.Error("failed to update workspace file: " + err.Error())
-					return err
-				}
-			}
-
-			openCmd := ""
-			if f.open && wsFile != "" {
-				openCmd = tryOpen(wsFile)
-			}
-
-			ui.Summary(ui.SummaryOpts{
-				Action:     "updated",
-				Name:       name,
-				Root:       root,
-				Stacks:     result.created,
-				Skipped:    result.skipped,
-				Failed:     result.failed,
-				OpenCmd:    openCmd,
-				RelativeCD: true,
-			})
-			return nil
+			return runGenerate(root, name, f, generateOpts{action: "updated", relativeCD: true})
 		},
 	}
 
@@ -445,3 +423,4 @@ func skillsCmd() *cobra.Command {
 	cmd.AddCommand(update)
 	return cmd
 }
+
