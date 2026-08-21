@@ -1,0 +1,162 @@
+# Root Makefile — orchestrate backend/, web/, and app/ from one place.
+# Missing stacks are skipped (or reported) so partial workspaces still work.
+
+PROJECT := [[.Name]]
+
+BACKEND_DIR := backend
+WEB_DIR     := web
+APP_DIR     := app
+
+BACKEND_MARKER := $(BACKEND_DIR)/go.mod
+WEB_MARKER     := $(WEB_DIR)/package.json
+APP_MARKER     := $(APP_DIR)/pubspec.yaml
+
+.PHONY: help status setup doctor dev run build test
+.PHONY: backend.setup backend.run backend.build backend.test backend.lint backend.tidy backend.doctor
+.PHONY: web.install web.dev web.build web.preview web.doctor
+.PHONY: app.get app.run app.analyze app.test app.clean app.doctor
+
+help: ## Show available targets
+	@echo "Workspace: $(PROJECT)"
+	@echo ""
+	@awk 'BEGIN {FS = ":.*## "}; \
+		/^[a-zA-Z0-9_.-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' \
+		$(MAKEFILE_LIST)
+	@echo ""
+	@echo "Stacks in this workspace:"
+	@$(MAKE) -s status
+
+status: ## List which stacks exist in this workspace
+	@if [ -f "$(BACKEND_MARKER)" ]; then echo "  backend  yes  ($(BACKEND_DIR)/)"; else echo "  backend  no   (vibeit add --backend)"; fi
+	@if [ -f "$(WEB_MARKER)" ]; then echo "  web      yes  ($(WEB_DIR)/)"; else echo "  web      no   (vibeit add --web)"; fi
+	@if [ -f "$(APP_MARKER)" ]; then echo "  app      yes  ($(APP_DIR)/)"; else echo "  app      no   (vibeit add --app)"; fi
+
+setup: ## One-time setup for all present stacks
+	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) backend.setup; else echo "skip backend (not in workspace)"; fi
+	@if [ -f "$(WEB_MARKER)" ]; then $(MAKE) web.install; else echo "skip web (not in workspace)"; fi
+	@if [ -f "$(APP_MARKER)" ]; then $(MAKE) app.get; else echo "skip app (not in workspace)"; fi
+	@echo "Setup complete."
+
+doctor: ## Check toolchains and health for all present stacks
+	@echo "== workspace: $(PROJECT) =="
+	@$(MAKE) -s status
+	@echo ""
+	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) backend.doctor; else echo "backend: not in workspace"; fi
+	@echo ""
+	@if [ -f "$(WEB_MARKER)" ]; then $(MAKE) web.doctor; else echo "web: not in workspace"; fi
+	@echo ""
+	@if [ -f "$(APP_MARKER)" ]; then $(MAKE) app.doctor; else echo "app: not in workspace"; fi
+
+dev: ## Start backend (background) + web dev server (foreground)
+	@set -e; \
+	backend_pid=""; \
+	if [ -f "$(BACKEND_MARKER)" ]; then \
+		echo "→ backend: make run"; \
+		$(MAKE) -C $(BACKEND_DIR) run & backend_pid=$$!; \
+	fi; \
+	if [ -f "$(WEB_MARKER)" ]; then \
+		echo "→ web: npm run dev"; \
+		trap '[ -n "$$backend_pid" ] && kill $$backend_pid 2>/dev/null || true' EXIT INT TERM; \
+		cd $(WEB_DIR) && npm run dev; \
+	elif [ -n "$$backend_pid" ]; then \
+		echo "→ web: not in workspace — backend running (pid $$backend_pid)"; \
+		echo "  Press Ctrl+C to stop backend"; \
+		wait $$backend_pid; \
+	else \
+		echo "nothing to run — add stacks with: vibeit add"; \
+		exit 1; \
+	fi
+
+run: dev ## Alias for dev (backend + web)
+
+build: ## Build all present stacks
+	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) backend.build; else echo "skip backend (not in workspace)"; fi
+	@if [ -f "$(WEB_MARKER)" ]; then $(MAKE) web.build; else echo "skip web (not in workspace)"; fi
+	@echo "Build complete. (Flutter: use make app.run for device builds)"
+
+test: ## Run tests for all present stacks
+	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) backend.test; else echo "skip backend (not in workspace)"; fi
+	@if [ -f "$(WEB_MARKER)" ]; then echo "skip web (no test script in template)"; fi
+	@if [ -f "$(APP_MARKER)" ]; then $(MAKE) app.test; else echo "skip app (not in workspace)"; fi
+
+# --- Backend (delegates to backend/Makefile) ---
+
+backend.setup: ## Backend: db + env setup
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@$(MAKE) -C $(BACKEND_DIR) setup
+
+backend.run: ## Backend: run API server
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@$(MAKE) -C $(BACKEND_DIR) run
+
+backend.build: ## Backend: compile server binary
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@$(MAKE) -C $(BACKEND_DIR) build
+
+backend.test: ## Backend: go test ./...
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@$(MAKE) -C $(BACKEND_DIR) test
+
+backend.lint: ## Backend: golangci-lint
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@$(MAKE) -C $(BACKEND_DIR) lint
+
+backend.tidy: ## Backend: go mod tidy
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@$(MAKE) -C $(BACKEND_DIR) tidy
+
+backend.doctor: ## Backend: env + postgres check
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@$(MAKE) -C $(BACKEND_DIR) doctor
+
+# --- Web (npm scripts) ---
+
+web.install: ## Web: npm install
+	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: vibeit add --web" && exit 1)
+	@cd $(WEB_DIR) && npm install
+
+web.dev: ## Web: Vite dev server
+	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: vibeit add --web" && exit 1)
+	@cd $(WEB_DIR) && npm run dev
+
+web.build: ## Web: production build
+	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: vibeit add --web" && exit 1)
+	@cd $(WEB_DIR) && npm run build
+
+web.preview: ## Web: preview production build
+	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: vibeit add --web" && exit 1)
+	@cd $(WEB_DIR) && npm run preview
+
+web.doctor: ## Web: node/npm + deps check
+	@echo "== web =="
+	@command -v node >/dev/null 2>&1 && echo "OK  node $$(node -v)" || (echo "FAIL node not found" && exit 1)
+	@command -v npm >/dev/null 2>&1 && echo "OK  npm $$(npm -v)" || (echo "FAIL npm not found" && exit 1)
+	@test -f "$(WEB_MARKER)" && echo "OK  $(WEB_MARKER)" || (echo "FAIL $(WEB_MARKER) missing" && exit 1)
+	@if [ -d "$(WEB_DIR)/node_modules" ]; then echo "OK  node_modules"; else echo "WARN node_modules missing — run: make web.install"; fi
+
+# --- App (Flutter) ---
+
+app.get: ## App: flutter pub get
+	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: vibeit add --app" && exit 1)
+	@cd $(APP_DIR) && flutter pub get
+
+app.run: ## App: flutter run (interactive — use its own terminal)
+	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: vibeit add --app" && exit 1)
+	@cd $(APP_DIR) && flutter run
+
+app.analyze: ## App: flutter analyze
+	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: vibeit add --app" && exit 1)
+	@cd $(APP_DIR) && flutter analyze
+
+app.test: ## App: flutter test
+	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: vibeit add --app" && exit 1)
+	@cd $(APP_DIR) && flutter test
+
+app.clean: ## App: flutter clean
+	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: vibeit add --app" && exit 1)
+	@cd $(APP_DIR) && flutter clean
+
+app.doctor: ## App: flutter toolchain check
+	@echo "== app =="
+	@command -v flutter >/dev/null 2>&1 && echo "OK  flutter $$(flutter --version | head -1)" || (echo "FAIL flutter not found" && exit 1)
+	@test -f "$(APP_MARKER)" && echo "OK  $(APP_MARKER)" || (echo "FAIL $(APP_MARKER) missing" && exit 1)
