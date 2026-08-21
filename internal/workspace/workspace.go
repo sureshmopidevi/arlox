@@ -111,14 +111,17 @@ func EnsureWorkspace(root, name string) error {
 	}
 	wsFile := filepath.Join(root, name+".code-workspace")
 	if _, err := os.Stat(wsFile); os.IsNotExist(err) {
-		return WriteWorkspaceFile(wsFile, name, nil)
+		return WriteWorkspaceFile(wsFile, name, []string{"."})
 	}
 	return nil
 }
 
 // WriteWorkspaceFile writes a fresh .code-workspace JSON file.
+// The project name is used as the display name for path "." (workspace root).
+// Stack folders are labeled "{name}-backend", "{name}-web", "{name}-app".
 func WriteWorkspaceFile(path, name string, folders []string) error {
 	wf := workspaceFile{
+		Folders: []workspaceFolder{},
 		Settings: map[string]any{
 			"files.exclude": map[string]any{"**/.dart_tool": true},
 		},
@@ -131,13 +134,29 @@ func WriteWorkspaceFile(path, name string, folders []string) error {
 		},
 	}
 	for _, f := range folders {
-		wf.Folders = append(wf.Folders, workspaceFolder{Name: f, Path: f})
+		wf.Folders = append(wf.Folders, workspaceFolder{
+			Name: FolderDisplayName(name, f),
+			Path: f,
+		})
 	}
 	data, err := json.MarshalIndent(wf, "", "  ")
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(path, data, 0o644)
+}
+
+// FolderDisplayName returns the IDE sidebar label for a workspace folder path.
+func FolderDisplayName(projectName, path string) string {
+	if path == "." || path == "" {
+		return projectName
+	}
+	switch path {
+	case "backend", "web", "app":
+		return projectName + "-" + path
+	default:
+		return path
+	}
 }
 
 // ReadWorkspaceFolders returns the folder paths listed in the workspace file.
@@ -168,12 +187,14 @@ func ListPresentStacks(root string) []string {
 	return present
 }
 
-// SyncWorkspaceFolders ensures every present stack folder is listed in the workspace file.
+// SyncWorkspaceFolders ensures the root "." folder and every present stack are listed.
 func SyncWorkspaceFolders(wsPath, root string) error {
-	return MergeWorkspaceFolders(wsPath, ListPresentStacks(root))
+	folders := append([]string{"."}, ListPresentStacks(root)...)
+	return MergeWorkspaceFolders(wsPath, folders)
 }
 
-// MergeWorkspaceFolders adds any new folders into the workspace file (union).
+// MergeWorkspaceFolders adds any new folders into the workspace file (union)
+// and refreshes display names so stacks are labeled "{project}-backend", etc.
 func MergeWorkspaceFolders(wsPath string, newFolders []string) error {
 	data, err := os.ReadFile(wsPath)
 	if err != nil {
@@ -183,14 +204,23 @@ func MergeWorkspaceFolders(wsPath string, newFolders []string) error {
 	if err := json.Unmarshal(data, &wf); err != nil {
 		return err
 	}
+	if wf.Folders == nil {
+		wf.Folders = []workspaceFolder{}
+	}
+
+	rootName := strings.TrimSuffix(filepath.Base(wsPath), ".code-workspace")
 
 	seen := make(map[string]bool)
-	for _, f := range wf.Folders {
+	for i, f := range wf.Folders {
 		seen[f.Path] = true
+		wf.Folders[i].Name = FolderDisplayName(rootName, f.Path)
 	}
 	for _, f := range newFolders {
 		if !seen[f] {
-			wf.Folders = append(wf.Folders, workspaceFolder{Name: f, Path: f})
+			wf.Folders = append(wf.Folders, workspaceFolder{
+				Name: FolderDisplayName(rootName, f),
+				Path: f,
+			})
 			seen[f] = true
 		}
 	}

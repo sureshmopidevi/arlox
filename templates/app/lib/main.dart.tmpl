@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:[[.Package]]/core/constants/app_constants.dart';
 import 'package:[[.Package]]/core/router/app_router.dart';
 
 void main() {
@@ -14,7 +15,7 @@ class AppRoot extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(goRouterProvider);
     return MaterialApp.router(
-      title: '[[.DisplayName]]',
+      title: AppConstants.appName,
       theme: ThemeData(useMaterial3: true),
       routerConfig: router,
     );

@@ -105,15 +105,18 @@ func Summary(opts SummaryOpts) {
 	fmt.Printf("  %s  %s\n\n", render(styleSuccess, action), render(styleWorkspace, opts.Name))
 
 	wsFile := opts.Name + ".code-workspace"
-	open := opts.OpenCmd
-	if open == "" {
-		wsOpen := wsFile
-		if !opts.RelativeCD {
-			wsOpen = filepath.Join(opts.Name, wsFile)
-		}
-		open = "cursor " + wsOpen
+	wsOpen := wsFile
+	if !opts.RelativeCD {
+		wsOpen = filepath.Join(opts.Name, wsFile)
 	}
-	fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-10s", "workspace")), render(styleWorkspace, open))
+
+	if opts.OpenCmd != "" {
+		fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", "opened")), render(styleWorkspace, opts.OpenCmd))
+	}
+	// --classic opens Cursor's IDE editor; bare `cursor` launches the Agents window.
+	fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", "cursor")), render(styleWorkspace, "cursor --classic "+wsOpen))
+	fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", "vscode")), render(styleWorkspace, "code "+wsOpen))
+	fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", "antigravity")), render(styleWorkspace, "agy-ide "+wsOpen))
 
 	prefix := opts.Name
 	if opts.RelativeCD {
@@ -124,20 +127,20 @@ func Summary(opts SummaryOpts) {
 	if prefix != "." {
 		makeCmd = "cd " + prefix + " && " + makeCmd
 	}
-	fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-10s", "make")), render(styleWorkspace, makeCmd))
+	fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", "make")), render(styleWorkspace, makeCmd))
 
 	for _, s := range opts.Stacks {
 		cmd := nextCommand(prefix, s)
-		fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-10s", s)), render(stackStyle(s), cmd))
+		fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", s)), render(stackStyle(s), cmd))
 	}
 	for _, s := range opts.Skipped {
-		fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-10s", s)), render(styleSkip, "skipped (already exists)"))
+		fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", s)), render(styleSkip, "skipped (already exists)"))
 	}
 	for _, s := range opts.Failed {
-		fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-10s", s)), render(styleError, "failed"))
+		fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", s)), render(styleError, "failed"))
 	}
 
-	fmt.Printf("\n  %s\n\n", render(styleMuted, "Open the workspace, then run make setup && make dev from the project root (or per-stack make targets)."))
+	fmt.Printf("\n  %s\n\n", render(styleMuted, "Open the .code-workspace file in Cursor, VS Code, or Antigravity IDE, then run make setup && make dev."))
 }
 
 func nextCommand(prefix, stack string) string {
@@ -178,5 +181,5 @@ func CommandBackend() string { return render(styleBackend, "make run") }
 func CommandWeb() string     { return render(styleWeb, "npm run dev") }
 func CommandApp() string     { return render(styleApp, "flutter run") }
 func CommandOpen(wsFile string) string {
-	return render(styleWorkspace, "cursor "+wsFile)
+	return render(styleWorkspace, "cursor --classic "+wsFile)
 }

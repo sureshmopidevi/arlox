@@ -7,6 +7,7 @@ import (
 )
 
 type Config struct {
+	AppName    string `mapstructure:"APP_NAME"`
 	ServerPort int    `mapstructure:"SERVER_PORT"`
 	ServerEnv  string `mapstructure:"SERVER_ENV"`
 
@@ -29,6 +30,7 @@ func Load(envFile string) *Config {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	// defaults
+	v.SetDefault("APP_NAME", "[[.DisplayName]]")
 	v.SetDefault("SERVER_PORT", 8080)
 	v.SetDefault("SERVER_ENV", "development")
 	v.SetDefault("DB_HOST", "localhost")

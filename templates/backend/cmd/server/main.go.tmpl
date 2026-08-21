@@ -57,7 +57,7 @@ func main() {
 	}
 
 	go func() {
-		log.Sugar().Infof("server listening on :%d", cfg.ServerPort)
+		log.Sugar().Infof("%s listening on :%d", cfg.AppName, cfg.ServerPort)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Sugar().Fatalf("listen: %v", err)
 		}

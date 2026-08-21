@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { envConfig } from '@/config/envConfig'
 import { useAuthStore } from '@/stores/authStore'
 
 const navItems = [{ label: 'Home', to: '/' }]
@@ -16,7 +17,7 @@ export function AdminSidebar() {
     <aside className="w-56 shrink-0 bg-white border-r border-gray-200 flex flex-col">
       <div className="px-4 py-4 border-b border-gray-200">
         <span className="text-sm font-semibold text-gray-800 tracking-tight">
-          Admin
+          {envConfig.appName}
         </span>
       </div>
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/lt-sureshmopidevi/vibeit/internal/generate"
 	"github.com/lt-sureshmopidevi/vibeit/internal/ui"
+	"github.com/lt-sureshmopidevi/vibeit/internal/version"
 	"github.com/lt-sureshmopidevi/vibeit/internal/workspace"
 )
 
@@ -35,19 +36,32 @@ func buildRoot() *cobra.Command {
 	bindStackFlags(create, &f)
 
 	root := &cobra.Command{
-		Use:   "vibeit [name]",
-		Short: "Scaffold and manage multi-stack workspaces",
-		Long:  "vibeit create workspaces with backend, web, and/or Flutter stacks plus Cursor rules and skills.",
-		Args:  cobra.MaximumNArgs(1),
+		Use:     "vibeit",
+		Short:   "Scaffold and manage multi-stack workspaces",
+		Long:    "vibeit create workspaces with backend, web, and/or Flutter stacks plus Cursor rules and skills.",
+		Version: version.Version,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runCreate(args, f)
+			return cmd.Help()
 		},
 	}
-	bindStackFlags(root, &f)
+	root.SetVersionTemplate("vibeit {{.Version}}\n")
 	root.AddCommand(create)
 	root.AddCommand(addCmd())
 	root.AddCommand(skillsCmd())
+	root.AddCommand(versionCmd())
+	root.AddCommand(upgradeCmd())
 	return root
+}
+
+func versionCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Print vibeit version",
+		Args:  cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("vibeit " + version.Version)
+		},
+	}
 }
 
 type stackFlags struct {
@@ -64,7 +78,7 @@ func bindStackFlags(cmd *cobra.Command, f *stackFlags) {
 	cmd.Flags().BoolVar(&f.backend, "backend", false, "include backend (Go) stack")
 	cmd.Flags().BoolVar(&f.web, "web", false, "include web (React/TS) stack")
 	cmd.Flags().BoolVar(&f.app, "app", false, "include app (Flutter) stack")
-	cmd.Flags().BoolVar(&f.open, "open", false, "open workspace in Cursor/VS Code after creation")
+	cmd.Flags().BoolVar(&f.open, "open", false, "open workspace in Cursor, VS Code, or Antigravity IDE after creation")
 	cmd.Flags().StringVar(&f.module, "module", "", "Go module path (default: github.com/example/<name>-backend)")
 	cmd.Flags().StringVar(&f.org, "org", "com.example", "Flutter org identifier")
 	cmd.Flags().StringVar(&f.out, "out", "", "parent directory for workspace (default: current directory)")
@@ -89,7 +103,8 @@ func buildData(name string, f stackFlags) generate.Data {
 	if module == "" {
 		module = "github.com/example/" + name + "-backend"
 	}
-	pkg := strings.ReplaceAll(name, "-", "_") + "_app"
+	// Flutter package names must be snake_case (no hyphens); match project name like web's package.json.
+	pkg := strings.ReplaceAll(name, "-", "_")
 	return generate.Data{
 		Name:        name,
 		DisplayName: toDisplayName(name),
@@ -190,13 +205,36 @@ func runStacks(root string, stacks []workspace.Stack, data generate.Data) stackR
 	return r
 }
 
+// editorLaunch describes how to open a .code-workspace in a given CLI.
+type editorLaunch struct {
+	bin  string
+	args []string // extra args before the workspace path (e.g. --classic for Cursor IDE)
+}
+
+// knownEditors are VS Code–compatible CLIs that can open .code-workspace files.
+// Order is preference for --open auto-launch.
+// Cursor needs --classic so it opens the IDE editor instead of the Agents window.
+var knownEditors = []editorLaunch{
+	{bin: "cursor", args: []string{"--classic"}},
+	{bin: "code"},
+	{bin: "agy-ide"},
+	{bin: "antigravity-ide"},
+}
+
 func tryOpen(wsFile string) string {
-	for _, editor := range []string{"cursor", "code"} {
-		if path, err := exec.LookPath(editor); err == nil {
-			cmd := exec.Command(path, wsFile)
-			_ = cmd.Start()
-			return editor + " " + filepath.Base(wsFile)
+	for _, ed := range knownEditors {
+		path, err := exec.LookPath(ed.bin)
+		if err != nil {
+			continue
 		}
+		args := append(append([]string{}, ed.args...), wsFile)
+		cmd := exec.Command(path, args...)
+		_ = cmd.Start()
+		display := ed.bin
+		if len(ed.args) > 0 {
+			display = ed.bin + " " + strings.Join(ed.args, " ")
+		}
+		return display + " " + filepath.Base(wsFile)
 	}
 	return ""
 }
@@ -247,6 +285,13 @@ func runCreate(args []string, f stackFlags) error {
 			return err
 		}
 		if len(stacks) == 0 {
+			wsFile := workspace.FindWorkspaceFile(target)
+			if wsFile != "" {
+				if err := workspace.SyncWorkspaceFolders(wsFile, target); err != nil {
+					ui.Error("failed to update workspace file: " + err.Error())
+					return err
+				}
+			}
 			ui.Dim("nothing selected — workspace folder is ready for vibeit add")
 			return nil
 		}

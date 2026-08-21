@@ -1,6 +1,8 @@
 class AppConstants {
   AppConstants._();
 
+  static const String appName = '[[.DisplayName]]';
+
   /// Override at build time: `--dart-define=API_URL=https://api.example.com/api/v1`
   static const String baseUrl = String.fromEnvironment(
     'API_URL',

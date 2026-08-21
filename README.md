@@ -21,18 +21,31 @@ vibeit create myapp
 ## Quick reference
 
 ```bash
-vibeit create myapp              # interactive — pick stacks, shows path first
+vibeit                         # help
+vibeit version                 # print version (also: vibeit -v)
+vibeit upgrade                 # git pull + rebuild + reinstall from ~/vibeit
+vibeit create myapp            # interactive — pick stacks, shows path first
 vibeit create myapp --backend --web --app
-cd myapp && vibeit add --app     # add stacks later
-make verify                      # dev smoke test (temp dir only, auto-deleted)
+cd myapp && vibeit add --app   # add stacks later
+make verify                    # dev smoke test (temp dir only, auto-deleted)
 make help
+```
+
+Release version lives in [`internal/version/VERSION`](internal/version/VERSION) — bump that file when shipping.
+
+To update an installed binary after pulling changes:
+
+```bash
+vibeit upgrade
+# or: vibeit upgrade --source ~/vibeit
+# or: VIBEIT_HOME=~/vibeit vibeit upgrade --no-pull
 ```
 
 ## What you get
 
 ```text
 myapp/
-  myapp.code-workspace
+  myapp.code-workspace   # open in Cursor, VS Code, or Antigravity IDE
   .cursor/              # fullstack sequential skill
   backend/              # Go + Gin (own git repo)
   web/                  # React + Tailwind (own git repo)

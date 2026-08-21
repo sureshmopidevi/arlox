@@ -3,6 +3,7 @@
 GOPATH_BIN := $(shell go env GOPATH)/bin
 BINARY     := bin/vibeit
 INSTALLED  := $(GOPATH_BIN)/vibeit
+VERSION    := $(shell tr -d '[:space:]' < internal/version/VERSION)
 export PATH := $(GOPATH_BIN):$(PATH)
 
 .DEFAULT_GOAL := help
@@ -13,6 +14,7 @@ help: ## Show available targets
 	$(MAKEFILE_LIST)
 	@echo ""
 	@echo "  Quick start:  source ./install.sh"
+	@echo "  Version:      $(VERSION)"
 	@echo "  GOPATH bin:   $(GOPATH_BIN)"
 
 setup: install ## Alias — one-step install (same as install)
@@ -51,6 +53,7 @@ path: ## Print export PATH=... for your shell
 doctor: ## Check go, node, npm, flutter, vibeit on PATH
 	@echo "== vibeit doctor =="
 	@echo "GOPATH bin: $(GOPATH_BIN)"
+	@echo "Source version: $(VERSION)"
 	@for tool in go node npm flutter; do \
 		if command -v $$tool >/dev/null 2>&1; then \
 			printf "  OK  %-8s %s\n" "$$tool" "$$(command -v $$tool)"; \
@@ -59,7 +62,7 @@ doctor: ## Check go, node, npm, flutter, vibeit on PATH
 		fi; \
 	done
 	@if command -v vibeit >/dev/null 2>&1; then \
-		printf "  OK  %-8s %s\n" "vibeit" "$$(command -v vibeit)"; \
+		printf "  OK  %-8s %s (%s)\n" "vibeit" "$$(command -v vibeit)" "$$(vibeit version 2>/dev/null || true)"; \
 	elif [ -x "./$(BINARY)" ]; then \
 		printf "  OK  %-8s ./$(BINARY) (run: source ./install.sh)\n" "vibeit"; \
 	else \
@@ -78,6 +81,8 @@ verify: ## Smoke test in $$TMPDIR (auto-deleted; does NOT touch cwd)
 
 verify-help: build ## Print vibeit CLI help
 	./$(BINARY) --help
+	./$(BINARY) -v
+	./$(BINARY) version
 	./$(BINARY) create --help
 	./$(BINARY) add --help
 	./$(BINARY) skills update --help

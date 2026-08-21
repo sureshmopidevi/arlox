@@ -34,6 +34,17 @@ echo ""
 
 echo "== vibeit verify =="
 echo "vibeit: ${VIBEIT}"
+EXPECTED_VERSION="$(tr -d '[:space:]' < "${ROOT}/internal/version/VERSION")"
+GOT_VERSION="$("${VIBEIT}" version)"
+echo "${GOT_VERSION}" | grep -qx "vibeit ${EXPECTED_VERSION}" || {
+  echo "fail: version mismatch — got '${GOT_VERSION}', want 'vibeit ${EXPECTED_VERSION}'"
+  exit 1
+}
+echo "$("${VIBEIT}" -v)" | grep -qx "vibeit ${EXPECTED_VERSION}" || {
+  echo "fail: -v mismatch"
+  exit 1
+}
+echo "version: ${GOT_VERSION} ok"
 mkdir -p "${WORKDIR}"
 cd "${WORKDIR}"
 
@@ -45,6 +56,28 @@ test -f "${DEMO}/backend/go.mod" || { echo "fail: backend missing"; exit 1; }
 test -f "${DEMO}/web/package.json" || { echo "fail: web missing"; exit 1; }
 test -f "${DEMO}/app/pubspec.yaml" || { echo "fail: app missing"; exit 1; }
 test -f "${DEMO}/demo.code-workspace" || { echo "fail: workspace missing"; exit 1; }
+python3 - <<PY
+import json, pathlib, sys
+ws = pathlib.Path("${DEMO}/demo.code-workspace")
+data = json.loads(ws.read_text())
+folders = data.get("folders")
+if not isinstance(folders, list) or len(folders) < 1:
+    sys.exit(f"fail: folders must be non-empty array, got {folders!r}")
+paths = {f["path"] for f in folders}
+names = {f["path"]: f["name"] for f in folders}
+if "." not in paths:
+    sys.exit("fail: workspace missing root folder path '.'")
+if not {"backend", "web", "app"}.issubset(paths):
+    sys.exit(f"fail: missing stack folders in {paths}")
+for path, want in {".": "demo", "backend": "demo-backend", "web": "demo-web", "app": "demo-app"}.items():
+    if names.get(path) != want:
+        sys.exit(f"fail: folder {path} name want {want!r}, got {names.get(path)!r}")
+PY
+# project identity stamped into each stack
+grep -q '^module github.com/example/demo-backend$' "${DEMO}/backend/go.mod" || { echo "fail: backend module name"; exit 1; }
+grep -q '"name": "demo"' "${DEMO}/web/package.json" || { echo "fail: web package name"; exit 1; }
+grep -q '^name: demo$' "${DEMO}/app/pubspec.yaml" || { echo "fail: app package name"; exit 1; }
+grep -q 'APP_NAME=Demo' "${DEMO}/backend/configs/local/app.env.example" || { echo "fail: backend APP_NAME"; exit 1; }
 test -f "${DEMO}/Makefile" || { echo "fail: root Makefile missing"; exit 1; }
 test -f "${DEMO}/.cursor/skills/add-feature-fullstack/SKILL.md" || { echo "fail: fullstack skill missing"; exit 1; }
 echo "ok"

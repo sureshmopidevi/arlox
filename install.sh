@@ -53,7 +53,7 @@ export PATH="${GOPATH_BIN}:${PATH}"
 
 echo ""
 echo "✓ vibeit installed: ${INSTALLED}"
-echo "✓ version: $("${INSTALLED}" --help 2>&1 | head -1 || true)"
+echo "✓ version: $("${INSTALLED}" version 2>/dev/null || "${INSTALLED}" -v)"
 echo ""
 
 if [[ "${SOURCED}" -eq 1 ]]; then
