@@ -7,7 +7,7 @@ description: Learning and knowledge capture system
 ## After adding a feature
 
 Run `.cursor/skills/learn/SKILL.md` to capture what was learned.
-Append an entry to `.cursor/skills/add-feature/learned/README.md`.
+Append an entry to `.cursor/skills/add-feature-web/learned/README.md`.
 
 ## Gated learning
 
@@ -17,7 +17,7 @@ Append an entry to `.cursor/skills/add-feature/learned/README.md`.
 
 ## Learned index
 
-`.cursor/skills/add-feature/learned/README.md` is the index.
+`.cursor/skills/add-feature-web/learned/README.md` is the index.
 Format per entry:
 
 ```

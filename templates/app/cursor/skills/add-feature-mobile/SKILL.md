@@ -1,5 +1,5 @@
 ---
-name: add-feature
+name: add-feature-mobile
 description: >-
   Scaffolds a Flutter vertical feature slice (data/domain/presentation),
   wires GoRouter, verifies with flutter analyze, and records learnings.
@@ -7,7 +7,7 @@ description: >-
   that consumes the backend API.
 ---
 
-# Add Feature (App)
+# Add Feature (Mobile)
 
 Scaffold a vertical feature slice under `lib/features/<name>/`.
 
@@ -22,9 +22,9 @@ Scaffold a vertical feature slice under `lib/features/<name>/`.
 ## Before coding
 
 1. Read `.cursor/rules/architecture.mdc`.
-2. Read `.cursor/skills/add-feature/learned/README.md`.
+2. Read `.cursor/skills/add-feature-mobile/learned/README.md`.
 3. If backend exists, read:
-   - `../backend/.cursor/skills/add-feature/learned/<feature>.md`
+   - `../backend/.cursor/skills/add-feature-backend/learned/<feature>.md`
 4. Confirm feature name if ambiguous.
 5. Success criteria: route opens, API wired, `flutter analyze` clean.
 
@@ -89,7 +89,7 @@ Fix all issues. Run `dart run custom_lint` if the project uses it.
 
 ### 9. Learn
 
-Append to `.cursor/skills/add-feature/learned/README.md`:
+Append to `.cursor/skills/add-feature-mobile/learned/README.md`:
 
 ```markdown
 ## YYYY-MM-DD — add <name>

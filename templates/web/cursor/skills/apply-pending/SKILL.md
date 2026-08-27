@@ -4,7 +4,7 @@ Review the learned index and apply unapplied lessons to the codebase.
 
 ## Steps
 
-1. Read `.cursor/skills/add-feature/learned/README.md`.
+1. Read `.cursor/skills/add-feature-web/learned/README.md`.
 2. Identify entries **not yet marked as applied**.
 3. For each pending entry:
    a. Determine if the pattern should be generalised into core code or rules.
@@ -16,7 +16,7 @@ Review the learned index and apply unapplied lessons to the codebase.
 
 - A learned pattern extracted into a shared hook/util.
 - A rule updated in `.cursor/rules/*.mdc`.
-- A skill step updated in `.cursor/skills/add-feature/SKILL.md`.
+- A skill step updated in `.cursor/skills/add-feature-web/SKILL.md`.
 
 ## What stays feature-local
 

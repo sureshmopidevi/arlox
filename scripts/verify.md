@@ -80,7 +80,7 @@ flutter pub get && flutter analyze
 test -f /tmp/vibeit-demo/.cursor/skills/add-feature-fullstack/SKILL.md
 test -f /tmp/vibeit-demo/backend/.cursor/rules/karpathy.mdc
 test -f /tmp/vibeit-demo/web/.cursor/rules/tailwind.mdc
-test -f /tmp/vibeit-demo/app/.cursor/skills/add-feature/learned/README.md
+test -f /tmp/vibeit-demo/app/.cursor/skills/add-feature-mobile/learned/README.md
 ```
 
 ## 8. NO_COLOR
@@ -93,6 +93,6 @@ Expect: same layout, no ANSI escapes.
 
 ## 9–11. Skills (manual / agent)
 
-- Add a feature via backend `add-feature` skill → `learned/<feature>.md` appears
+- Add a feature via backend `add-feature-backend` skill → `learned/<feature>.md` appears
 - Full-stack feature → sequential backend → web → app
 - `vibeit skills update` leaves `learned/` untouched

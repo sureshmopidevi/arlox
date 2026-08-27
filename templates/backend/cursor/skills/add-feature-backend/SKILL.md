@@ -1,5 +1,5 @@
 ---
-name: add-feature
+name: add-feature-backend
 description: >-
   Scaffolds a new Go domain module (repository, service, handler, routes),
   wires it into main/router, verifies with make test, and records an API
@@ -21,7 +21,7 @@ Surgical checklist for a new domain module. Touch only what this feature needs.
 ## Before coding
 
 1. Read `.cursor/rules/architecture.mdc` and `.cursor/rules/karpathy.mdc` (if present).
-2. Read `.cursor/skills/add-feature/learned/` for prior patterns.
+2. Read `.cursor/skills/add-feature-backend/learned/` for prior patterns.
 3. State assumptions + success criteria:
    - Endpoints to add
    - Auth required? yes/no
@@ -84,7 +84,7 @@ Loop until green. Do not declare done with failing tests.
 
 ### 6. Record API contract (required for web/app)
 
-Write `.cursor/skills/add-feature/learned/<name>.md`:
+Write `.cursor/skills/add-feature-backend/learned/<name>.md`:
 
 ```markdown
 # <name> — API contract

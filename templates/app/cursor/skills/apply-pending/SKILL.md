@@ -10,7 +10,7 @@ Invoke when asked to **"apply pending learnings"** or **"apply pending"**.
 
 ## Steps
 
-1. Read `.cursor/skills/add-feature/learned/README.md`.
+1. Read `.cursor/skills/add-feature-mobile/learned/README.md`.
 
 2. Identify all entries whose title starts with `[PENDING]`.
 

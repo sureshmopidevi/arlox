@@ -16,7 +16,7 @@ Run **one stack at a time**. Never parallelize backend/web/app for the same feat
 - User wants a feature in more than one of: API, admin web, Flutter app
 - Phrases like: "full stack", "backend and web", "across stacks", "API + UI"
 
-**Do not use** for single-stack work — use that stack's `add-feature` skill instead.
+**Do not use** for single-stack work — use `add-feature-backend`, `add-feature-web`, or `add-feature-mobile` instead.
 
 ## Success criteria (all that apply)
 
@@ -48,11 +48,11 @@ Skip only missing folders. Never skip an existing stack.
 
 ## 1. Phase — Backend (if `backend/` exists)
 
-Work **only** under `backend/`. Follow `backend/.cursor/skills/add-feature/SKILL.md`.
+Work **only** under `backend/`. Follow `backend/.cursor/skills/add-feature-backend/SKILL.md`.
 
 **Required output before leaving this phase:**
 
-Create `backend/.cursor/skills/add-feature/learned/<feature>.md` with this contract:
+Create `backend/.cursor/skills/add-feature-backend/learned/<feature>.md` with this contract:
 
 ```markdown
 # <feature> — API contract
@@ -79,10 +79,10 @@ Do **not** start web until this passes and the contract file exists.
 
 ## 2. Phase — Web (if `web/` exists)
 
-Work **only** under `web/`. Follow `web/.cursor/skills/add-feature/SKILL.md`.
+Work **only** under `web/`. Follow `web/.cursor/skills/add-feature-web/SKILL.md`.
 
 **Must consume the backend contract** from  
-`backend/.cursor/skills/add-feature/learned/<feature>.md` (or ask if missing).
+`backend/.cursor/skills/add-feature-backend/learned/<feature>.md` (or ask if missing).
 
 **Required deliverables:**
 
@@ -98,7 +98,7 @@ Do **not** start app until this passes.
 
 ## 3. Phase — App (if `app/` exists)
 
-Work **only** under `app/`. Follow `app/.cursor/skills/add-feature/SKILL.md`.
+Work **only** under `app/`. Follow `app/.cursor/skills/add-feature-mobile/SKILL.md`.
 
 Consume the same backend contract. Do not invent endpoints.
 
@@ -110,8 +110,8 @@ For each phase, use a Task/subagent with:
 
 ```text
 Scope: only <stack>/ 
-Read: <stack>/.cursor/skills/add-feature/SKILL.md
-Contract: backend/.cursor/skills/add-feature/learned/<feature>.md  (web/app)
+Read: backend → add-feature-backend | web → add-feature-web | app → add-feature-mobile
+Contract: backend/.cursor/skills/add-feature-backend/learned/<feature>.md  (web/mobile)
 Verify: <stack verify command>
 Return: files changed + verify output summary
 ```

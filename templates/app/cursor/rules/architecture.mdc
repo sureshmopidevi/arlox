@@ -49,8 +49,8 @@ lib/
 
 ## Adding a New Feature
 
-Use the `add-feature` skill (`.cursor/skills/add-feature/SKILL.md`).
+Use the `add-feature-mobile` skill (`.cursor/skills/add-feature-mobile/SKILL.md`).
 
 ## Modifying `core/`
 
-Check `.cursor/skills/add-feature/learned/README.md` for prior decisions first. Record the rationale for any core change as a new entry.
+Check `.cursor/skills/add-feature-mobile/learned/README.md` for prior decisions first. Record the rationale for any core change as a new entry.

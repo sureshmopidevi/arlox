@@ -166,7 +166,9 @@ echo ""
 echo "== 7. guardrails =="
 test -f "${DEMO}/backend/.cursor/rules/karpathy.mdc"
 test -f "${DEMO}/web/.cursor/rules/tailwind.mdc"
-test -f "${DEMO}/app/.cursor/skills/add-feature/learned/README.md"
+test -f "${DEMO}/backend/.cursor/skills/add-feature-backend/SKILL.md" || { echo "fail: backend add-feature skill missing"; exit 1; }
+test -f "${DEMO}/web/.cursor/skills/add-feature-web/SKILL.md" || { echo "fail: web add-feature skill missing"; exit 1; }
+test -f "${DEMO}/app/.cursor/skills/add-feature-mobile/learned/README.md" || { echo "fail: app add-feature skill missing"; exit 1; }
 echo "ok"
 
 echo ""

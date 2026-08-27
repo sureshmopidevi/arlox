@@ -7,8 +7,8 @@ alwaysApply: true
 
 ## After adding a feature
 1. Complete the feature (passes `make test`).
-2. Append a concise note to `.cursor/skills/add-feature/learned/<feature>.md`.
-3. Update `.cursor/skills/add-feature/learned/README.md` index.
+2. Append a concise note to `.cursor/skills/add-feature-backend/learned/<feature>.md`.
+3. Update `.cursor/skills/add-feature-backend/learned/README.md` index.
 
 ## When making an architecture correction
 1. Run `.cursor/skills/learn/SKILL.md` to stage a patch under `.cursor/skills/.pending/`.

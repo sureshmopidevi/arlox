@@ -12,7 +12,7 @@ When a feature spans stacks, implement **one stack at a time** in this order. Ne
 1. **Backend** (if `backend/` exists)
    - Define and implement API
    - Verify: `make test`
-   - Write contract: `backend/.cursor/skills/add-feature/learned/<feature>.md`
+   - Write contract: `backend/.cursor/skills/add-feature-backend/learned/<feature>.md`
 
 2. **Web** (if `web/` exists) — **mandatory when the folder exists**
    - Consume the backend contract (do not invent endpoints)

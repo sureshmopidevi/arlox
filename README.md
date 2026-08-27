@@ -67,7 +67,7 @@ myapp/
 
 ## Agent guardrails
 
-Each stack ships `.cursor/rules`, `.cursor/skills/add-feature` (with auto `learned/` logs), Karpathy guidelines, and `AGENTS.md`.
+Each stack ships `.cursor/rules`, `.cursor/skills/add-feature-*` (with auto `learned/` logs), Karpathy guidelines, and `AGENTS.md`.
 
 ```bash
 vibeit skills update    # refresh templates; keeps your learned/ files

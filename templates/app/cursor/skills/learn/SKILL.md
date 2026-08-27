@@ -14,8 +14,8 @@ Invoke when asked to **"learn \<something\>"** or after completing a significant
 
    | Work type | File |
    |-----------|------|
-   | Feature work | `.cursor/skills/add-feature/learned/README.md` |
-   | Core change | `.cursor/skills/add-feature/learned/README.md` (under `### Core`) |
+   | Feature work | `.cursor/skills/add-feature-mobile/learned/README.md` |
+   | Core change | `.cursor/skills/add-feature-mobile/learned/README.md` (under `### Core`) |
    | Deferred/risky | Same file, prefix title with `[PENDING]` |
 
 2. Append an entry at the top of the entries section (newest first):

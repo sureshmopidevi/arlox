@@ -22,8 +22,8 @@ After completing any feature or significant fix, append a concise entry to the r
 
 | Work type | Append to |
 |-----------|-----------|
-| New feature | `.cursor/skills/add-feature/learned/README.md` |
-| Core change | `.cursor/skills/add-feature/learned/README.md` under a `### Core` sub-heading |
+| New feature | `.cursor/skills/add-feature-mobile/learned/README.md` |
+| Core change | `.cursor/skills/add-feature-mobile/learned/README.md` under a `### Core` sub-heading |
 | Deferred / risky change | Mark entry with `[PENDING]` — see `apply-pending` skill |
 
 ## Gated Learn for `core/`

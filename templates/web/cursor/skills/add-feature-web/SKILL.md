@@ -1,5 +1,5 @@
 ---
-name: add-feature
+name: add-feature-web
 description: >-
   Adds an admin-console feature: types, API client, TanStack Query hooks,
   page/components, router entry, and sidebar nav. Verifies with npm run build.
@@ -22,9 +22,9 @@ Add a vertical slice to the React admin console. Keep pages thin; put logic in `
 ## Before coding
 
 1. Read `.cursor/rules/architecture.mdc` and `.cursor/rules/karpathy.mdc` (if present).
-2. Read `.cursor/skills/add-feature/learned/README.md`.
+2. Read `.cursor/skills/add-feature-web/learned/README.md`.
 3. If backend exists, **read the API contract**:
-   - `../backend/.cursor/skills/add-feature/learned/<feature>.md`
+   - `../backend/.cursor/skills/add-feature-backend/learned/<feature>.md`
    - Or existing backend handlers/routes
 4. Success criteria: route works, types match API, `npm run build` exits 0.
 
@@ -97,7 +97,7 @@ Must exit 0. Fix type errors before finishing.
 
 ### 7. Record learning
 
-Append to `.cursor/skills/add-feature/learned/README.md`:
+Append to `.cursor/skills/add-feature-web/learned/README.md`:
 
 ```markdown
 ## YYYY-MM-DD — <name>
