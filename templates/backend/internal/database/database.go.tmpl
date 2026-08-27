@@ -13,10 +13,7 @@ import (
 )
 
 func Connect(cfg *config.Config, log *zap.Logger) *gorm.DB {
-	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode,
-	)
+	dsn := buildDSN(cfg)
 
 	level := gormLogger.Warn
 	if cfg.ServerEnv != "production" {
@@ -36,4 +33,17 @@ func Connect(cfg *config.Config, log *zap.Logger) *gorm.DB {
 
 	log.Sugar().Info("database connected")
 	return db
+}
+
+func buildDSN(cfg *config.Config) string {
+	if cfg.DBPassword != "" {
+		return fmt.Sprintf(
+			"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+			cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode,
+		)
+	}
+	return fmt.Sprintf(
+		"host=%s port=%d user=%s dbname=%s sslmode=%s",
+		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBName, cfg.DBSSLMode,
+	)
 }

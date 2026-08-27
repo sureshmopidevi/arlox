@@ -33,8 +33,8 @@ No business logic, no API calls, no state in pages.
 
 - Auth state in `useAuthStore` (Zustand, persisted to localStorage).
 - Never store tokens in component state or context.
-- Protected routes use `<ProtectedRoute />` — redirects to `/login` if no token.
-- Logout: call `clearAuth()`, then `navigate('/login', { replace: true })`.
+- Home (`/`) is public. Use `<ProtectedRoute />` for routes that require sign-in.
+- Logout: call `clearAuth()`, then `navigate('/', { replace: true })`.
 
 ## Styling
 

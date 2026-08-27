@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -49,17 +53,23 @@ func main() {
 
 	r := server.NewRouter(cfg, log, pHandler, aHandler)
 
+	addr := fmt.Sprintf(":%d", cfg.ServerPort)
+	ln, err := listenOrPrompt(addr, cfg.ServerPort)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "  "+err.Error())
+		os.Exit(1)
+	}
+
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.ServerPort),
 		Handler:      r,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 
 	go func() {
-		log.Sugar().Infof("%s listening on :%d", cfg.AppName, cfg.ServerPort)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Sugar().Fatalf("listen: %v", err)
+		log.Sugar().Infof("%s listening on %s", cfg.AppName, addr)
+		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Sugar().Fatalf("serve: %v", err)
 		}
 	}()
 
@@ -73,4 +83,107 @@ func main() {
 		log.Sugar().Errorf("shutdown: %v", err)
 	}
 	log.Sugar().Info("server stopped")
+}
+
+func listenOrPrompt(addr string, port int) (net.Listener, error) {
+	for {
+		ln, err := net.Listen("tcp", addr)
+		if err == nil {
+			return ln, nil
+		}
+		if !isAddrInUse(err) {
+			return nil, err
+		}
+
+		fmt.Fprintf(os.Stderr, "\n  Port :%d is already in use.\n", port)
+		fmt.Fprintf(os.Stderr, "  Another process is listening there (often a previous backend run).\n\n")
+		fmt.Fprintf(os.Stderr, "  [k] Kill process on :%d and start\n", port)
+		fmt.Fprintf(os.Stderr, "  [r] Retry (after you stop it yourself)\n")
+		fmt.Fprintf(os.Stderr, "  [q] Quit\n\n")
+		fmt.Fprint(os.Stderr, "  Choice [k/r/q]: ")
+
+		choice, err := readChoice()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "\n  (non-interactive) free the port with:\n")
+			fmt.Fprintf(os.Stderr, "    kill $(lsof -tiTCP:%d -sTCP:LISTEN)\n", port)
+			fmt.Fprintf(os.Stderr, "  then run again.\n\n")
+			return nil, fmt.Errorf("aborted: port %d in use", port)
+		}
+		switch strings.ToLower(choice) {
+		case "k", "kill":
+			fmt.Fprintf(os.Stderr, "  killing process on :%d…\n", port)
+			if err := killListeners(port); err != nil {
+				fmt.Fprintf(os.Stderr, "  could not free port: %v\n", err)
+				continue
+			}
+			fmt.Fprintf(os.Stderr, "  freed :%d — starting…\n", port)
+			time.Sleep(300 * time.Millisecond)
+		case "r", "retry", "":
+			fmt.Fprintf(os.Stderr, "  retrying…\n")
+		case "q", "quit", "exit":
+			return nil, fmt.Errorf("aborted: port %d in use", port)
+		default:
+			fmt.Fprintf(os.Stderr, "  unknown choice %q — pick k, r, or q\n", choice)
+		}
+	}
+}
+
+// readChoice reads from the real terminal so prompts work under `make` / redirected stdin.
+func readChoice() (string, error) {
+	f, err := os.OpenFile("/dev/tty", os.O_RDONLY, 0)
+	if err != nil {
+		line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		return strings.TrimSpace(line), err
+	}
+	defer f.Close()
+	line, err := bufio.NewReader(f).ReadString('\n')
+	return strings.TrimSpace(line), err
+}
+
+func isAddrInUse(err error) bool {
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
+		var sysErr syscall.Errno
+		if errors.As(opErr.Err, &sysErr) {
+			return sysErr == syscall.EADDRINUSE
+		}
+	}
+	return strings.Contains(err.Error(), "address already in use")
+}
+
+func killListeners(port int) error {
+	// -nP avoids DNS/port-name lookups that can hang lsof indefinitely.
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "lsof", "-nP", fmt.Sprintf("-tiTCP:%d", port), "-sTCP:LISTEN")
+	out, err := cmd.Output()
+	if ctx.Err() == context.DeadlineExceeded {
+		return fmt.Errorf("timed out finding process on :%d", port)
+	}
+	if err != nil {
+		return fmt.Errorf("no listener found on :%d", port)
+	}
+	pids := strings.Fields(string(out))
+	if len(pids) == 0 {
+		return fmt.Errorf("no listener found on :%d", port)
+	}
+	fmt.Fprintf(os.Stderr, "  found pid %s\n", strings.Join(pids, ", "))
+	var failed []string
+	for _, pid := range pids {
+		kctx, kcancel := context.WithTimeout(context.Background(), 2*time.Second)
+		kerr := exec.CommandContext(kctx, "kill", pid).Run()
+		kcancel()
+		if kerr != nil {
+			kctx9, kcancel9 := context.WithTimeout(context.Background(), 2*time.Second)
+			err9 := exec.CommandContext(kctx9, "kill", "-9", pid).Run()
+			kcancel9()
+			if err9 != nil {
+				failed = append(failed, pid)
+			}
+		}
+	}
+	if len(failed) > 0 {
+		return fmt.Errorf("could not kill pid %s", strings.Join(failed, ", "))
+	}
+	return nil
 }

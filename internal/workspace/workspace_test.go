@@ -93,3 +93,56 @@ func TestSyncWorkspaceFolders(t *testing.T) {
 		}
 	}
 }
+
+func TestDetectWorkspaceWalksUp(t *testing.T) {
+	root := t.TempDir()
+	wsPath := filepath.Join(root, "demo.code-workspace")
+	if err := WriteWorkspaceFile(wsPath, "demo", []string{"."}); err != nil {
+		t.Fatal(err)
+	}
+	stackDir := filepath.Join(root, "backend")
+	if err := os.MkdirAll(stackDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	found, ok := DetectWorkspace(stackDir)
+	if !ok || found != root {
+		t.Fatalf("DetectWorkspace from stack dir: got (%q, %v), want (%q, true)", found, ok, root)
+	}
+
+	_, ok = DetectWorkspace(t.TempDir())
+	if ok {
+		t.Fatal("expected no workspace in empty temp dir")
+	}
+}
+
+func TestValidateName(t *testing.T) {
+	valid := []string{"myapp", "my-app", "my_app", "app2", "a_b-c"}
+	for _, name := range valid {
+		if err := ValidateName(name); err != nil {
+			t.Errorf("ValidateName(%q): unexpected error: %v", name, err)
+		}
+	}
+	invalid := []string{"", "MyApp", "my app", "my.app", "my@app"}
+	for _, name := range invalid {
+		if err := ValidateName(name); err == nil {
+			t.Errorf("ValidateName(%q): expected error", name)
+		}
+	}
+}
+
+func TestFindWorkspaceFilePrefersMatchingName(t *testing.T) {
+	root := t.TempDir()
+	other := filepath.Join(root, "other.code-workspace")
+	preferred := filepath.Join(root, "demo.code-workspace")
+	for _, p := range []string{other, preferred} {
+		if err := os.WriteFile(p, []byte("{}"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	got := FindWorkspaceFile(root)
+	if got != preferred {
+		t.Fatalf("FindWorkspaceFile: got %q, want %q", got, preferred)
+	}
+}

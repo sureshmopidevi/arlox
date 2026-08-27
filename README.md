@@ -6,7 +6,7 @@ Scaffold multi-stack workspaces with **Cursor rules and skills** baked in.
 
 ### Option 1: Go Install (Recommended for external users — no git clone needed)
 
-If you have Go 1.22+ installed:
+If you have Go installed (see `go.mod` for the required version; generated backend stacks use Go 1.22+):
 
 ```bash
 go install github.com/sureshmopidevi/vibeit/cmd/vibeit@latest
@@ -44,7 +44,7 @@ make verify                    # dev smoke test (temp dir only, auto-deleted)
 make help
 ```
 
-Release version lives in [`internal/version/VERSION`](internal/version/VERSION) — bump that file when shipping.
+Release version lives in [`internal/version/VERSION`](internal/version/VERSION). **Bump it on every CLI or template change** (see [`.cursor/rules/versioning.mdc`](.cursor/rules/versioning.mdc)).
 
 To update an installed binary after pulling changes:
 

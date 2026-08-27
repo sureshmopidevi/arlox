@@ -1,108 +1,146 @@
-# Add Feature Across Stacks (Full-Stack)
+---
+name: add-feature-fullstack
+description: >-
+  Implements a feature across backend, web, and Flutter app in strict order
+  (backend → web → app) with API contracts and verification between phases.
+  Use when the user asks to add a full-stack feature, cross-stack feature,
+  feature for backend and web, or anything spanning multiple vibeit stacks.
+---
 
-**name:** add-feature-fullstack
+# Add Feature Across Stacks
 
-**description:** Add a feature across backend, web, and app sequentially using subagents. Use when implementing a feature that spans multiple stacks in a vibeit workspace.
+Run **one stack at a time**. Never parallelize backend/web/app for the same feature.
 
-## When to Use
+## When to use
 
-Invoke this skill when you need to implement a feature across multiple stacks (backend, web, app) in a vibeit workspace. This skill ensures correct sequencing, API contracts flow downward, and each phase is verified before the next begins.
+- User wants a feature in more than one of: API, admin web, Flutter app
+- Phrases like: "full stack", "backend and web", "across stacks", "API + UI"
 
-Do not use this skill for single-stack changes; use the stack-specific `add-feature` skill instead.
+**Do not use** for single-stack work — use that stack's `add-feature` skill instead.
 
-## How It Works
+## Success criteria (all that apply)
 
-### 1. Detect Stacks
+| Stack | Must prove |
+|-------|------------|
+| Backend | `make test` green + `learned/<feature>.md` with API contract |
+| Web | Types + API client + UI + route/nav + `npm run build` green |
+| App | Feature slice + route + `flutter analyze` green |
 
-Check which stacks exist in the workspace:
-- `backend/` → backend stack exists
-- `web/` → web stack exists
-- `app/` → app stack exists
+If `web/` exists, **Phase 2 (web) is mandatory** — do not stop after backend.
 
-### 2. Route by Stack Count
+## 0. Detect stacks
 
-- **Single stack only**: Launch that stack's native `add-feature` skill and stop. No sequencing needed.
-- **Multiple stacks**: Proceed to sequential phases below.
-
-### 3. Phase 1: Backend (if exists)
-
-Create a Task subagent scoped to `backend/`:
-
-```
-Full Repository Path: [backend/ absolute path]
-Use: backend/.cursor/skills/add-feature/SKILL.md
-Constraint: Work only in backend/ folder
-Verify: Run `make test` before returning
-Document: Ensure learned/<feature>.md documents API contracts
-```
-
-Wait for Phase 1 to complete and verify green. **Do not start Phase 2 until Phase 1 passes.**
-
-### 4. Phase 2: Web (if exists)
-
-After Phase 1 completes, create a Task subagent scoped to `web/`:
-
-```
-Full Repository Path: [web/ absolute path]
-Use: web/.cursor/skills/add-feature/SKILL.md
-API Contract: Consume backend API from backend/learned/<feature>.md or backend module definitions
-Constraint: Work only in web/ folder
-Verify: Run `npm run build` before returning
+```text
+backend/  → Phase 1
+web/      → Phase 2   ← required when this folder exists
+app/      → Phase 3
 ```
 
-Wait for Phase 2 to complete and verify green. **Do not start Phase 3 until Phase 2 passes.**
+State the plan to the user before coding:
 
-### 5. Phase 3: App (if exists)
-
-After Phase 2 completes, create a Task subagent scoped to `app/`:
-
-```
-Full Repository Path: [app/ absolute path]
-Use: app/.cursor/skills/add-feature/SKILL.md
-API Contract: Consume backend API from backend/learned/<feature>.md or backend module definitions
-Constraint: Work only in app/ folder
-Verify: Run `flutter analyze` before returning
+```text
+1. backend → verify: make test + contract doc
+2. web     → verify: npm run build
+3. app     → verify: flutter analyze
 ```
 
-Wait for Phase 3 to complete and verify green.
+Skip only missing folders. Never skip an existing stack.
 
-## Surgical Scope
+## 1. Phase — Backend (if `backend/` exists)
 
-Each subagent must:
-- Touch only its assigned stack folder (`backend/`, `web/`, or `app/`)
-- Not refactor or modify unrelated code in other stacks
-- Not make "drive-by" improvements across folders
-- Respect existing code style and patterns within its stack
+Work **only** under `backend/`. Follow `backend/.cursor/skills/add-feature/SKILL.md`.
 
-## Verification Checkpoints
+**Required output before leaving this phase:**
 
-| Phase | Command | Success Criteria |
-|-------|---------|------------------|
-| Backend | `make test` | All tests pass, learned/ doc exists |
-| Web | `npm run build` | Build succeeds, no errors |
-| App | `flutter analyze` | No analysis errors |
+Create `backend/.cursor/skills/add-feature/learned/<feature>.md` with this contract:
 
-If any phase fails verification, fix it before advancing. Do not skip or defer.
+```markdown
+# <feature> — API contract
 
-## Example Workflow
+## Endpoints
+| Method | Path | Auth | Request | Response |
+|--------|------|------|---------|----------|
+| POST | /api/v1/<resource> | yes | `{ ... }` | `{ data: { ... } }` |
 
-```
-User: "Add export to CSV feature across the full stack"
+## Errors
+| Status | When |
+|--------|------|
+| 400 | validation |
+| 401 | missing/invalid token |
+| 404 | not found |
 
-1. Check: backend/, web/, app/ all exist → proceed to phases
-2. Phase 1: Launch subagent to add CSV export to backend API
-   - Backend returns API endpoint contract in learned/csv-export.md
-3. Phase 2: Launch subagent to add CSV export UI to web
-   - Web consumes backend API, builds UI, verifies npm run build
-4. Phase 3: Launch subagent to add CSV export to Flutter app
-   - App consumes backend API, implements feature, verifies flutter analyze
-5. Done: Feature complete across all stacks in correct order
+## Notes for web/app
+- Envelope: `{ data: T }` unwrapped by clients
+- Auth header: `Authorization: Bearer <token>`
 ```
 
-## Notes
+**Verify:** `cd backend && make test`  
+Do **not** start web until this passes and the contract file exists.
 
-- Always run phases in strict order: backend → web → app
-- Never parallelize phases; wait for completion + verification before next
-- Backend API changes must be documented so web/app can consume them
-- If a stack doesn't exist, skip that phase and continue
-- If only one stack exists, use its native add-feature skill instead
+## 2. Phase — Web (if `web/` exists)
+
+Work **only** under `web/`. Follow `web/.cursor/skills/add-feature/SKILL.md`.
+
+**Must consume the backend contract** from  
+`backend/.cursor/skills/add-feature/learned/<feature>.md` (or ask if missing).
+
+**Required deliverables:**
+
+1. `src/features/<name>/types.ts` — match API shapes
+2. `src/features/<name>/api/<name>Api.ts` — calls via `apiClient`
+3. Query/mutation hooks
+4. Feature UI component + thin page
+5. Route in `src/app/router.tsx`
+6. Nav item in `src/layouts/AdminSidebar.tsx` (unless user said otherwise)
+
+**Verify:** `cd web && npm run build`  
+Do **not** start app until this passes.
+
+## 3. Phase — App (if `app/` exists)
+
+Work **only** under `app/`. Follow `app/.cursor/skills/add-feature/SKILL.md`.
+
+Consume the same backend contract. Do not invent endpoints.
+
+**Verify:** `cd app && flutter analyze`
+
+## Subagent pattern (preferred)
+
+For each phase, use a Task/subagent with:
+
+```text
+Scope: only <stack>/ 
+Read: <stack>/.cursor/skills/add-feature/SKILL.md
+Contract: backend/.cursor/skills/add-feature/learned/<feature>.md  (web/app)
+Verify: <stack verify command>
+Return: files changed + verify output summary
+```
+
+Wait for completion + green verify before launching the next phase.
+
+## Anti-patterns
+
+- Building backend only and calling the feature "done" when `web/` exists
+- Starting web/app before backend contract is written
+- Parallel subagents on the same feature
+- Editing multiple stacks in one agent turn
+- Drive-by refactors outside the feature
+- Hardcoding API URLs instead of using stack clients/config
+
+## Example
+
+User: "Add issues list with create form (full stack)"
+
+```text
+1. Backend: modules/issues + routes + tests → learned/issues.md
+2. Web: features/issues + IssuesPage + /issues nav → npm run build
+3. App: lib/features/issues + GoRoute → flutter analyze
+```
+
+## Done checklist
+
+- [ ] Every existing stack was implemented (not skipped)
+- [ ] Backend contract doc exists (if backend ran)
+- [ ] Web UI is reachable via route + nav (if web ran)
+- [ ] Each phase verify command passed
+- [ ] No cross-stack drive-by edits

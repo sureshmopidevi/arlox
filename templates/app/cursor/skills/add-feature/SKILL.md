@@ -1,109 +1,121 @@
-# Skill: add-feature
-
-Scaffold a new vertical feature slice following the project architecture.
-
-## Trigger
-
-Invoke when asked to **"add feature \<name\>"** or **"create feature \<name\>"**.
-
 ---
+name: add-feature
+description: >-
+  Scaffolds a Flutter vertical feature slice (data/domain/presentation),
+  wires GoRouter, verifies with flutter analyze, and records learnings.
+  Use when adding a mobile/app feature, new screen, or Flutter resource
+  that consumes the backend API.
+---
+
+# Add Feature (App)
+
+Scaffold a vertical feature slice under `lib/features/<name>/`.
+
+## When to use
+
+- New Flutter screen / feature
+- Mobile UI that calls the backend API
+- "Add X to the app"
+
+**Do not use** alone for multi-stack work — prefer workspace `add-feature-fullstack`.
+
+## Before coding
+
+1. Read `.cursor/rules/architecture.mdc`.
+2. Read `.cursor/skills/add-feature/learned/README.md`.
+3. If backend exists, read:
+   - `../backend/.cursor/skills/add-feature/learned/<feature>.md`
+4. Confirm feature name if ambiguous.
+5. Success criteria: route opens, API wired, `flutter analyze` clean.
 
 ## Steps
 
-### 0. Prepare
+### 1. Scaffold
 
-1. Read `.cursor/rules/architecture.mdc`.
-2. Read `.cursor/skills/add-feature/learned/README.md` for prior decisions relevant to this feature.
-3. Confirm the feature name with the user if ambiguous.
-
-### 1. Scaffold files
-
-Create under `lib/features/<name>/`:
-
-```
-data/
-  datasources/<name>_remote_datasource.dart
-  models/<name>_dto.dart
-  repositories/<name>_repository_impl.dart
-domain/
-  entities/<name>.dart
-  repositories/<name>_repository.dart
-  usecases/get_<name>.dart          # or appropriate verb (create_, update_, delete_)
-presentation/
-  screens/<name>_screen.dart        # Scaffold + AppBar + body
-  providers/<name>_providers.dart   # manual Riverpod Provider / NotifierProvider
+```text
+lib/features/<name>/
+  data/
+    datasources/<name>_remote_datasource.dart
+    models/<name>_dto.dart
+    repositories/<name>_repository_impl.dart
+  domain/
+    entities/<name>.dart
+    repositories/<name>_repository.dart
+    usecases/get_<name>.dart    # or create_/update_/delete_
+  presentation/
+    screens/<name>_screen.dart
+    providers/<name>_providers.dart
 ```
 
 ### 2. Datasource
 
-- Inject `DioClient` via constructor parameter (do not access `dioClientProvider` directly inside the datasource — let the provider wire it).
-- Catch `DioException`, convert with `DioClient.mapError`, rethrow as `ApiException`.
+- Inject `DioClient` via constructor (providers wire it — do not read providers inside datasource).
+- Map `DioException` with `DioClient.mapError` → `ApiException`.
+- Paths must match the backend contract.
 
 ### 3. Repository
 
-- Domain interface in `domain/repositories/<name>_repository.dart` — return types use domain entities, not DTOs.
-- Implementation in `data/repositories/<name>_repository_impl.dart`.
+- Domain interface returns entities (not DTOs).
+- Impl maps DTO → entity.
 
 ### 4. Use case
 
-```dart
-class Get<Name> {
-  const Get<Name>(this._repository);
-  final <Name>Repository _repository;
-  Future<List<<Name>>> call() => _repository.get<Name>s();
-}
-```
+One public `call` method per use case class. No multi-purpose god use cases.
 
-### 5. Provider
+### 5. Providers
 
-Feature-scoped provider in `presentation/providers/<name>_provider.dart`:
+Feature-scoped Riverpod providers in `presentation/providers/`. Wire:
 
-```dart
-@riverpod
-Future<List<<Name>>> <name>(Ref ref) async {
-  final client = ref.watch(dioClientProvider);
-  final datasource = <Name>RemoteDatasource(client);
-  final repo = <Name>RepositoryImpl(datasource);
-  return Get<Name>(repo).call();
-}
-```
+`dioClient` → datasource → repository → use case → presentation state.
 
 ### 6. Screen
 
-- Use `ConsumerWidget` or `ConsumerStatefulWidget`.
-- Handle `AsyncValue` states: loading → `CircularProgressIndicator`, error → `EmptyStateView`, data → your list/content.
-- Material widgets only. No custom tokens.
+- `ConsumerWidget` / `ConsumerStatefulWidget` only.
+- Handle `AsyncValue`: loading / error (`EmptyStateView` if present) / data.
+- Material widgets only — no custom design-token systems unless the project already has one.
+- Use `AppConstants.appName` / existing constants — do not hardcode product titles unnecessarily.
 
-### 7. Register route
+### 7. Route
 
-Add a `GoRoute` entry to `lib/core/router/app_router.dart`.
+Add a `GoRoute` in `lib/core/router/app_router.dart`.
 
-### 8. Analyze
+### 8. Verify
 
 ```bash
 flutter analyze
-dart run custom_lint
 ```
 
-Fix **all** warnings before finishing.
+Fix all issues. Run `dart run custom_lint` if the project uses it.
 
 ### 9. Learn
 
-Append an entry to `.cursor/skills/add-feature/learned/README.md`:
+Append to `.cursor/skills/add-feature/learned/README.md`:
 
 ```markdown
-## YYYY-MM-DD — add <name> feature
-**What**: scaffolded <name> feature with remote datasource and GoRouter route.
-**Why**: <rationale for any non-obvious decisions>.
-**Gotchas**: <anything a future agent should know>.
+## YYYY-MM-DD — add <name>
+**What**: scaffolded <name> (datasource, repo, use case, screen, route).
+**API**: <endpoints consumed>.
+**Gotchas**: <notes>.
 ```
-
----
 
 ## Constraints
 
-- Material widgets only — no custom theme files, no Verdant tokens.
-- `ConsumerWidget` or `ConsumerStatefulWidget` for all screens — never `StatefulWidget` + manual state.
-- No auth guard on routes unless explicitly requested.
-- Keep use cases single-responsibility — one public `call` method per class.
-- Features must not import each other. Use `core/` for anything shared.
+- Features must not import other features — shared code goes in `core/`
+- No auth route guards unless requested
+- Do not invent backend endpoints
+- Surgical diffs only
+
+## Anti-patterns
+
+- `StatefulWidget` + manual plumbing instead of Riverpod
+- Calling Dio directly from widgets
+- Skipping GoRouter registration
+- Parallel "also fix backend/web" edits from this skill
+
+## Done checklist
+
+- [ ] Feature slice created
+- [ ] Route registered
+- [ ] API matches backend contract
+- [ ] `flutter analyze` clean
+- [ ] Learning entry recorded

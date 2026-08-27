@@ -1,0 +1,30 @@
+---
+description: Bump vibeit version when shipping changes
+alwaysApply: true
+---
+
+# Versioning
+
+Release version is **`internal/version/VERSION`** (embedded into the CLI via `go:embed`).
+
+## When to bump
+
+| Change type | Bump | Example |
+|-------------|------|---------|
+| Breaking CLI/template behavior | **MAJOR** | `1.0.0` → `2.0.0` |
+| New features, template fixes, non-breaking improvements | **MINOR** | `0.1.0` → `0.2.0` |
+| Small fixes, docs-only in repo (no template/CLI behavior change) | **PATCH** | `0.2.0` → `0.2.1` |
+
+**Any change that affects generated projects or CLI behavior** (templates, `internal/cli`, `internal/generate`, `internal/workspace`) → bump at least **MINOR** unless it is a pure bugfix patch.
+
+## Checklist before finishing a PR / release
+
+1. Edit `internal/version/VERSION` (semver, no `v` prefix).
+2. Run `go test ./...` and `make verify`.
+3. Reinstall locally: `source ./install.sh` or `vibeit upgrade --no-pull`.
+4. Confirm: `vibeit version` matches `internal/version/VERSION`.
+
+## Do not
+
+- Bump version in unrelated drive-by commits.
+- Forget to bump when templates change — users rely on `vibeit version` to know what they installed.

@@ -106,12 +106,13 @@ func buildData(name string, f stackFlags) generate.Data {
 	// Flutter package names must be snake_case (no hyphens); match project name like web's package.json.
 	pkg := strings.ReplaceAll(name, "-", "_")
 	return generate.Data{
-		Name:        name,
-		DisplayName: toDisplayName(name),
-		Module:      module,
-		Package:     pkg,
-		Org:         f.org,
-		APIURL:      "http://localhost:8080/api/v1",
+		Name:          name,
+		DisplayName:   toDisplayName(name),
+		Module:        module,
+		Package:       pkg,
+		Org:           f.org,
+		APIURL:        "http://localhost:8080/api/v1",
+		VibeitVersion: version.Version,
 	}
 }
 
@@ -130,7 +131,7 @@ func promptName() (string, error) {
 	err := huh.NewForm(huh.NewGroup(
 		huh.NewInput().
 			Title("Project name").
-			Description("lowercase letters, numbers, and hyphens").
+			Description("lowercase letters, numbers, hyphens, and underscores").
 			Validate(workspace.ValidateName).
 			Value(&name),
 	)).Run()
@@ -184,6 +185,12 @@ func executeStacks(root string, stacks []workspace.Stack, data generate.Data) st
 		if workspace.StackExists(root, s) {
 			ui.Progress(string(s), "skipped")
 			r.skipped = append(r.skipped, string(s))
+			continue
+		}
+		if workspace.StackPresentButEmpty(root, s) {
+			ui.Progress(string(s), "failed")
+			ui.Error(fmt.Sprintf("%s/ exists but is incomplete — remove it or run vibeit add --%s again after fixing", s, s))
+			r.failed = append(r.failed, string(s))
 			continue
 		}
 		ui.Progress(string(s), "generating")
@@ -296,6 +303,9 @@ func runGenerate(root, name string, f stackFlags, opts generateOpts) error {
 		OpenCmd:    openCmd,
 		RelativeCD: opts.relativeCD,
 	})
+	if len(result.failed) > 0 {
+		return fmt.Errorf("%d stack(s) failed", len(result.failed))
+	}
 	return nil
 }
 
@@ -329,11 +339,17 @@ func runCreate(args []string, f stackFlags) error {
 	ui.Header("create", name)
 	ui.WorkspaceInfo(target, filepath.Join(target, name+".code-workspace"))
 
+	wsFile := filepath.Join(target, name+".code-workspace")
+	_, wsErr := os.Stat(wsFile)
+	isNewWorkspace := os.IsNotExist(wsErr)
+
 	if err := workspace.EnsureWorkspace(target, name); err != nil {
 		return err
 	}
-	if err := generate.WorkspaceRoot(target, buildData(name, f)); err != nil {
-		return err
+	if isNewWorkspace {
+		if err := generate.WorkspaceRoot(target, buildData(name, f)); err != nil {
+			return err
+		}
 	}
 
 	return runGenerate(target, name, f, generateOpts{action: "created"})
@@ -367,7 +383,7 @@ func addCmd() *cobra.Command {
 
 			root, ok := workspace.DetectWorkspace(cwd)
 			if !ok {
-				ui.Error("no vibeit workspace found in current directory")
+				ui.Error("no vibeit workspace found — run from a workspace root or stack folder")
 				return fmt.Errorf("run vibeit create first")
 			}
 
@@ -375,6 +391,13 @@ func addCmd() *cobra.Command {
 			name := strings.TrimSuffix(filepath.Base(wsFile), ".code-workspace")
 
 			ui.Header("add", name)
+
+			if wsFile != "" {
+				if err := workspace.SyncWorkspaceFolders(wsFile, root); err != nil {
+					ui.Error("failed to update workspace file: " + err.Error())
+					return err
+				}
+			}
 
 			if len(workspace.ListMissingStacks(root)) == 0 {
 				ui.Dim("all stacks already exist")
@@ -406,7 +429,8 @@ func skillsCmd() *cobra.Command {
 			}
 			root, ok := workspace.DetectWorkspace(cwd)
 			if !ok {
-				root = cwd
+				ui.Error("no vibeit workspace found — run from a workspace root or stack folder")
+				return fmt.Errorf("run vibeit create first")
 			}
 
 			ui.Header("skills update", root)

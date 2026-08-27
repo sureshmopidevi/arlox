@@ -1,0 +1,30 @@
+---
+description: Bump app package versions when shipping user-facing changes
+alwaysApply: true
+---
+
+# Versioning (generated workspace)
+
+Bump stack versions when you ship **user-facing** changes to that stack.
+
+## Where
+
+| Stack | File | When |
+|-------|------|------|
+| Web | `web/package.json` → `"version"` | UI, routes, deps, or public API client changes |
+| App | `app/pubspec.yaml` → `version:` | Flutter UI, deps, or release build |
+| Backend | tag / release notes (optional) | Breaking API or migration |
+
+## Semver (web `package.json`)
+
+- **PATCH** — bug fixes, copy, styling
+- **MINOR** — new features, new routes/pages (non-breaking)
+- **MAJOR** — breaking API contract or auth behavior
+
+## After bumping
+
+- Web: `npm run build` must pass
+- App: `flutter analyze` must pass
+- Backend: `go test ./...` / `make test` must pass
+
+Do not bump version for WIP or uncommitted experiments.

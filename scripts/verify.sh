@@ -8,7 +8,11 @@ source "${ROOT}/scripts/env.sh"
 ensure_vibeit_path
 ensure_local_tool_paths
 
-VIBEIT="$(command -v vibeit)"
+if [[ -x "${ROOT}/bin/vibeit" ]]; then
+  VIBEIT="${ROOT}/bin/vibeit"
+else
+  VIBEIT="$(command -v vibeit)"
+fi
 WORKDIR="${TMPDIR:-/tmp}/vibeit-verify-$$"
 DEMO="${WORKDIR}/demo"
 DEMO2="${WORKDIR}/demo2"
@@ -53,7 +57,9 @@ echo "== 1. create all stacks =="
 NO_COLOR=1 "${VIBEIT}" create demo --backend --web --app
 
 test -f "${DEMO}/backend/go.mod" || { echo "fail: backend missing"; exit 1; }
+test -f "${DEMO}/backend/go.sum" || { echo "fail: backend go.sum missing"; exit 1; }
 test -f "${DEMO}/web/package.json" || { echo "fail: web missing"; exit 1; }
+test -d "${DEMO}/web/node_modules" || { echo "fail: web node_modules missing"; exit 1; }
 test -f "${DEMO}/app/pubspec.yaml" || { echo "fail: app missing"; exit 1; }
 test -f "${DEMO}/demo.code-workspace" || { echo "fail: workspace missing"; exit 1; }
 python3 - <<PY
@@ -78,8 +84,12 @@ grep -q '^module github.com/example/demo-backend$' "${DEMO}/backend/go.mod" || {
 grep -q '"name": "demo"' "${DEMO}/web/package.json" || { echo "fail: web package name"; exit 1; }
 grep -q '^name: demo$' "${DEMO}/app/pubspec.yaml" || { echo "fail: app package name"; exit 1; }
 grep -q 'APP_NAME=Demo' "${DEMO}/backend/configs/local/app.env.example" || { echo "fail: backend APP_NAME"; exit 1; }
+test -f "${DEMO}/backend/configs/local/app.env" || { echo "fail: backend app.env missing"; exit 1; }
+test -f "${DEMO}/web/.env" || { echo "fail: web .env missing"; exit 1; }
+test -f "${DEMO}/app/.dart_tool/package_config.json" || { echo "fail: app pub get missing"; exit 1; }
 test -f "${DEMO}/Makefile" || { echo "fail: root Makefile missing"; exit 1; }
 test -f "${DEMO}/.cursor/skills/add-feature-fullstack/SKILL.md" || { echo "fail: fullstack skill missing"; exit 1; }
+test -f "${DEMO}/.cursor/rules/versioning.mdc" || { echo "fail: versioning rule missing"; exit 1; }
 echo "ok"
 
 echo ""

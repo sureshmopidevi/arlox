@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -46,5 +47,22 @@ func Load(envFile string) *Config {
 	if err := v.Unmarshal(&cfg); err != nil {
 		panic("config unmarshal: " + err.Error())
 	}
+	applyDefaults(&cfg)
 	return &cfg
+}
+
+func applyDefaults(cfg *Config) {
+	if cfg.DBUser == "" {
+		if u := os.Getenv("USER"); u != "" {
+			cfg.DBUser = u
+		} else {
+			cfg.DBUser = "postgres"
+		}
+	}
+	if cfg.DBName == "" {
+		cfg.DBName = "[[.Name]]"
+	}
+	if cfg.DBSSLMode == "" {
+		cfg.DBSSLMode = "disable"
+	}
 }

@@ -47,14 +47,48 @@ doctor: ## Check toolchains and health for all present stacks
 	@echo ""
 	@if [ -f "$(APP_MARKER)" ]; then $(MAKE) app.doctor; else echo "app: not in workspace"; fi
 
-dev: ## Start backend (background) + web dev server (foreground)
+dev: ## Start backend (background), wait until ready, then web dev server
 	@set -e; \
 	backend_pid=""; \
+	backend_port=8080; \
+	if [ -f "$(BACKEND_DIR)/configs/local/app.env" ]; then \
+		backend_port=$$(grep -E '^SERVER_PORT=' "$(BACKEND_DIR)/configs/local/app.env" | cut -d= -f2 | tr -d '[:space:]'); \
+		[ -n "$$backend_port" ] || backend_port=8080; \
+	fi; \
 	if [ -f "$(BACKEND_MARKER)" ]; then \
+		if [ ! -f "$(BACKEND_DIR)/go.sum" ]; then \
+			echo "→ backend: go mod tidy (first run)"; \
+			$(MAKE) -C $(BACKEND_DIR) tidy; \
+		fi; \
 		echo "→ backend: make run"; \
 		$(MAKE) -C $(BACKEND_DIR) run & backend_pid=$$!; \
 	fi; \
 	if [ -f "$(WEB_MARKER)" ]; then \
+		if [ -f "$(BACKEND_MARKER)" ]; then \
+			echo "→ waiting for backend http://localhost:$$backend_port/health/live ..."; \
+			ready=0; \
+			for i in $$(seq 1 60); do \
+				if curl -sf "http://localhost:$$backend_port/health/live" >/dev/null 2>&1; then \
+					ready=1; \
+					break; \
+				fi; \
+				if [ -n "$$backend_pid" ] && ! kill -0 "$$backend_pid" 2>/dev/null; then \
+					echo "error: backend exited before becoming ready — check $(BACKEND_DIR)/ logs"; \
+					exit 1; \
+				fi; \
+				sleep 1; \
+			done; \
+			if [ "$$ready" -ne 1 ]; then \
+				echo "error: backend not ready after 60s — fix backend, then retry make dev"; \
+				[ -n "$$backend_pid" ] && kill $$backend_pid 2>/dev/null || true; \
+				exit 1; \
+			fi; \
+			echo "→ backend ready"; \
+		fi; \
+		if [ ! -d "$(WEB_DIR)/node_modules" ]; then \
+			echo "→ web: npm install (first run)"; \
+			$(MAKE) web.install; \
+		fi; \
 		echo "→ web: npm run dev"; \
 		trap '[ -n "$$backend_pid" ] && kill $$backend_pid 2>/dev/null || true' EXIT INT TERM; \
 		cd $(WEB_DIR) && npm run dev; \
@@ -111,9 +145,13 @@ backend.doctor: ## Backend: env + postgres check
 
 # --- Web (npm scripts) ---
 
-web.install: ## Web: npm install
+web.install: ## Web: npm install + seed .env from .env.example
 	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: vibeit add --web" && exit 1)
 	@cd $(WEB_DIR) && npm install
+	@if [ ! -f "$(WEB_DIR)/.env" ] && [ -f "$(WEB_DIR)/.env.example" ]; then \
+		cp "$(WEB_DIR)/.env.example" "$(WEB_DIR)/.env"; \
+		echo "→ created $(WEB_DIR)/.env from .env.example"; \
+	fi
 
 web.dev: ## Web: Vite dev server
 	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: vibeit add --web" && exit 1)

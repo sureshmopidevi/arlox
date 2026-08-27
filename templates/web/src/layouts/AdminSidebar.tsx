@@ -5,12 +5,13 @@ import { useAuthStore } from '@/stores/authStore'
 const navItems = [{ label: 'Home', to: '/' }]
 
 export function AdminSidebar() {
+  const token = useAuthStore((s) => s.token)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const navigate = useNavigate()
 
   function handleSignOut() {
     clearAuth()
-    navigate('/login', { replace: true })
+    navigate('/', { replace: true })
   }
 
   return (
@@ -42,12 +43,21 @@ export function AdminSidebar() {
       </nav>
 
       <div className="p-3 border-t border-gray-200">
-        <button
-          onClick={handleSignOut}
-          className="w-full px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md text-left transition-colors"
-        >
-          Sign out
-        </button>
+        {token ? (
+          <button
+            onClick={handleSignOut}
+            className="w-full px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md text-left transition-colors"
+          >
+            Sign out
+          </button>
+        ) : (
+          <NavLink
+            to="/login"
+            className="block w-full px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+          >
+            Sign in
+          </NavLink>
+        )}
       </div>
     </aside>
   )

@@ -37,10 +37,10 @@ fi
 # Permanent PATH in ~/.zshrc (idempotent)
 if [[ -f "${ZSHRC}" ]] && ! grep -qE '(go/bin|GOPATH/bin)' "${ZSHRC}" 2>/dev/null; then
   echo "→ adding ${GOPATH_BIN} to ~/.zshrc"
-  cat >> "${ZSHRC}" <<'EOF'
+  cat >> "${ZSHRC}" <<EOF
 
-# Go (go install → ~/go/bin) — added by vibeit install.sh
-export PATH="$HOME/go/bin:$PATH"
+# Go (go install → \$(go env GOPATH)/bin) — added by vibeit install.sh
+export PATH="${GOPATH_BIN}:\$PATH"
 EOF
 elif [[ -f "${ZSHRC}" ]]; then
   echo "→ ~/.zshrc already has Go bin on PATH"

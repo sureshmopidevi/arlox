@@ -123,7 +123,7 @@ func Summary(opts SummaryOpts) {
 		prefix = "."
 	}
 
-	makeCmd := "make setup && make dev"
+	makeCmd := "make dev"
 	if prefix != "." {
 		makeCmd = "cd " + prefix + " && " + makeCmd
 	}
@@ -140,18 +140,18 @@ func Summary(opts SummaryOpts) {
 		fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", s)), render(styleError, "failed"))
 	}
 
-	fmt.Printf("\n  %s\n\n", render(styleMuted, "Open the .code-workspace file in Cursor, VS Code, or Antigravity IDE, then run make setup && make dev."))
+	fmt.Printf("\n  %s\n\n", render(styleMuted, "Open the .code-workspace file in Cursor, VS Code, or Antigravity IDE, then run make dev."))
 }
 
 func nextCommand(prefix, stack string) string {
 	var cmd string
 	switch stack {
 	case "backend":
-		cmd = "make backend.setup && make backend.run"
+		cmd = "make backend.run"
 	case "web":
-		cmd = "make web.install && make web.dev"
+		cmd = "make web.dev"
 	case "app":
-		cmd = "make app.get && make app.run"
+		cmd = "make app.run"
 	default:
 		cmd = "make help"
 	}

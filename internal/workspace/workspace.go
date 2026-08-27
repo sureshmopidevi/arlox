@@ -43,45 +43,64 @@ type workspaceExts struct {
 	Recommendations []string `json:"recommendations"`
 }
 
-var nameRe = regexp.MustCompile(`^[a-z0-9-]+$`)
+var nameRe = regexp.MustCompile(`^[a-z0-9_-]+$`)
 
-// ValidateName returns an error if name is not lowercase [a-z0-9-]+.
+// ValidateName returns an error if name is not lowercase [a-z0-9_-]+.
 func ValidateName(name string) error {
 	if name == "" {
 		return fmt.Errorf("name cannot be empty")
 	}
 	if !nameRe.MatchString(name) {
-		return fmt.Errorf("name must contain only lowercase letters, numbers, and hyphens")
+		return fmt.Errorf("name must contain only lowercase letters, numbers, hyphens, and underscores")
 	}
 	return nil
 }
 
-// DetectWorkspace returns the root path if a *.code-workspace file exists in cwd.
+// DetectWorkspace returns the workspace root if a *.code-workspace file exists
+// in cwd or any parent directory.
 func DetectWorkspace(cwd string) (string, bool) {
-	entries, err := os.ReadDir(cwd)
-	if err != nil {
-		return "", false
-	}
-	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".code-workspace") {
-			return cwd, true
+	dir := cwd
+	for {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return "", false
 		}
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".code-workspace") {
+				return dir, true
+			}
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
 	}
 	return "", false
 }
 
 // FindWorkspaceFile returns the path to the *.code-workspace file in root, or "".
+// Prefers {basename(root)}.code-workspace, otherwise the first match alphabetically.
 func FindWorkspaceFile(root string) string {
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return ""
 	}
+	preferred := filepath.Join(root, filepath.Base(root)+".code-workspace")
+	if _, err := os.Stat(preferred); err == nil {
+		return preferred
+	}
+	var found string
 	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".code-workspace") {
-			return filepath.Join(root, e.Name())
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".code-workspace") {
+			continue
+		}
+		candidate := filepath.Join(root, e.Name())
+		if found == "" || e.Name() < filepath.Base(found) {
+			found = candidate
 		}
 	}
-	return ""
+	return found
 }
 
 // StackExists reports whether the stack directory contains its marker file.

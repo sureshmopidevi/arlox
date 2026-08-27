@@ -20,8 +20,8 @@ Always run `npm run build` to verify before finishing.
 ## Key conventions
 
 - API calls go through `src/api/client.ts` (axios, auto-unwraps `{data}` envelope).
-- Auth state in `useAuthStore` (Zustand persist). Never store in component state.
-- Protected routes use `<ProtectedRoute />` — redirect to `/login` if no token.
+- Auth state in `useAuthStore` (Zustand persist). Home (`/`) is public by default.
+- Wrap routes in `<ProtectedRoute />` when a feature requires sign-in.
 - Pages (`src/pages/`) are thin wrappers; logic lives in `src/features/`.
 - Tailwind utility classes only. No custom CSS beyond `src/index.css` directives.
 

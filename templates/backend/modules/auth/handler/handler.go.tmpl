@@ -42,8 +42,16 @@ func (h *Handler) Login(c *gin.Context) {
 }
 
 func (h *Handler) Me(c *gin.Context) {
-	claims, _ := c.Get(middleware.ClaimsKey)
-	jwtClaims := claims.(*authjwt.Claims)
+	claims, ok := c.Get(middleware.ClaimsKey)
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	jwtClaims, ok := claims.(*authjwt.Claims)
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	user, err := h.svc.Me(jwtClaims.UserID)
 	if err != nil {
 		response.Err(c, http.StatusNotFound, "user not found")

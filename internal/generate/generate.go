@@ -17,12 +17,13 @@ import (
 
 // Data holds the template variables for all stacks.
 type Data struct {
-	Name        string
-	DisplayName string
-	Module      string
-	Package     string
-	Org         string
-	APIURL      string
+	Name          string
+	DisplayName   string
+	Module        string
+	Package       string
+	Org           string
+	APIURL        string
+	VibeitVersion string
 }
 
 // HasTool reports whether name is available on PATH.
@@ -47,6 +48,10 @@ func Stack(root string, stack workspace.Stack, data Data) error {
 		if !HasTool("flutter") {
 			return fmt.Errorf("flutter not found in PATH")
 		}
+	}
+
+	if !HasTool("git") {
+		return fmt.Errorf("git not found in PATH")
 	}
 
 	stackName := string(stack)
@@ -80,6 +85,10 @@ func Stack(root string, stack workspace.Stack, data Data) error {
 	}
 
 	if err := renderTemplates(tmplfs.FS, stackName, stackDir, data); err != nil {
+		return cleanup(err)
+	}
+
+	if err := finalizeStack(stack, stackDir, data); err != nil {
 		return cleanup(err)
 	}
 

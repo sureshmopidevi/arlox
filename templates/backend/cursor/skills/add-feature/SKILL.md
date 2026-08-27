@@ -1,50 +1,126 @@
-# Skill: Add Feature
+---
+name: add-feature
+description: >-
+  Scaffolds a new Go domain module (repository, service, handler, routes),
+  wires it into main/router, verifies with make test, and records an API
+  contract in learned/. Use when adding a backend feature, new API resource,
+  or new modules/<name> domain in this Go service.
+---
 
-Checklist for adding a new domain module.
+# Add Feature (Backend)
 
-## Step 1 — Read examples first
-Read all files in `.cursor/skills/add-feature/learned/` before writing a single line of code. They show real patterns already established in this project.
+Surgical checklist for a new domain module. Touch only what this feature needs.
 
-## Step 2 — Create module files
+## When to use
+
+- New API resource / domain module under `modules/`
+- Extending the Gin API with CRUD or domain endpoints
+
+**Do not use** for cross-stack work — use workspace `add-feature-fullstack`.
+
+## Before coding
+
+1. Read `.cursor/rules/architecture.mdc` and `.cursor/rules/karpathy.mdc` (if present).
+2. Read `.cursor/skills/add-feature/learned/` for prior patterns.
+3. State assumptions + success criteria:
+   - Endpoints to add
+   - Auth required? yes/no
+   - Verify: `make test` (+ `make lint` if available)
+
+If the feature name or scope is ambiguous, ask before scaffolding.
+
+## Steps
+
+### 1. Scaffold module
+
+```text
+modules/<name>/
+  repository/repository.go
+  service/service.go
+  handler/handler.go
+  routes/routes.go
 ```
-modules/<name>/repository/repository.go
-modules/<name>/service/service.go
-modules/<name>/handler/handler.go
-modules/<name>/routes/routes.go
-```
 
-Follow layer rules (see `.cursor/rules/architecture.mdc`):
-- Repository: GORM only
-- Service: logic only
-- Handler: bind + `response.*` only
-- Routes: register on the group passed in
+Layer rules:
 
-## Step 3 — Wire in main.go
-Add to `cmd/server/main.go`:
+| Layer | Allowed | Forbidden |
+|-------|---------|-----------|
+| Repository | GORM, models | HTTP, gin.Context, business rules |
+| Service | Business logic | GORM, gin.Context |
+| Handler | Bind → service → `response.*` | Business logic, raw `c.JSON` |
+| Routes | Register on passed group | New router frameworks |
+
+### 2. Wire DI in `cmd/server/main.go`
+
 ```go
 <name>Repo := <name>Repo.New(db)
-<name>Svc  := <name>Service.New(<name>Repo)
+<name>Svc  := <name>Service.New(<name>Repo /*, cfg if needed */)
 <name>H    := <name>Handler.New(<name>Svc)
 ```
+
 Pass `<name>H` into `server.NewRouter(...)`.
 
-## Step 4 — Register in router.go
-Add parameter to `NewRouter` signature and call:
+### 3. Register routes in `internal/server/router.go`
+
 ```go
-<name>Routes.Register(api, h)
+<name>Routes.Register(api, <name>H)
 ```
 
-## Step 5 — Verify
+Prefer `/api/v1/<resource>` paths consistent with existing modules (`auth`, `ping`).
+
+### 4. Models / migrations
+
+- Add GORM models under `internal/models/` only if needed.
+- Keep seed data minimal; only what the feature requires for local demo.
+
+### 5. Verify
+
 ```bash
 make test
-make lint
+make lint   # if golangci-lint is installed
 ```
-Both must pass before declaring done.
 
-## Step 6 — Record learning
-Append `.cursor/skills/add-feature/learned/<name>.md` with:
-- What endpoints were added
-- Any non-obvious patterns used
-- Gotchas encountered
+Loop until green. Do not declare done with failing tests.
 
-Update `.cursor/skills/add-feature/learned/README.md` index.
+### 6. Record API contract (required for web/app)
+
+Write `.cursor/skills/add-feature/learned/<name>.md`:
+
+```markdown
+# <name> — API contract
+
+## Endpoints
+| Method | Path | Auth | Request | Response |
+|--------|------|------|---------|----------|
+| GET | /api/v1/<name> | yes | — | `{ data: [ ... ] }` |
+| POST | /api/v1/<name> | yes | `{ ... }` | `{ data: { ... } }` |
+
+## Errors
+| Status | When |
+|--------|------|
+| 400 | validation |
+| 401 | unauthorized |
+| 404 | not found |
+
+## Notes for web/app
+- Envelope `{ data: T }` — clients unwrap automatically
+- Header: `Authorization: Bearer <token>`
+```
+
+Update `learned/README.md` index with a one-line entry.
+
+## Anti-patterns
+
+- Business logic in handlers
+- Calling GORM from handlers/services incorrectly (GORM only in repository)
+- Skipping the learned/ contract doc
+- Refactoring unrelated modules
+- Adding a second ORM/router/DI framework
+
+## Done checklist
+
+- [ ] Module files created and wired
+- [ ] Routes registered
+- [ ] `make test` passes
+- [ ] `learned/<name>.md` contract written
+- [ ] No drive-by edits outside this feature

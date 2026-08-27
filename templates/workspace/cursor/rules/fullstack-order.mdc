@@ -1,37 +1,37 @@
+---
+description: Sequential full-stack feature implementation order (backend → web → app)
+alwaysApply: true
+---
+
 # Full-Stack Feature Implementation Order
 
-alwaysApply: true
-description: Sequential full-stack feature implementation order
-
-## Principle
-
-When implementing a feature across stacks (backend, web, app), **run ONE stack at a time in a fixed order**. Never parallelize cross-stack work for the same feature.
+When a feature spans stacks, implement **one stack at a time** in this order. Never parallelize the same feature across stacks.
 
 ## Order
 
 1. **Backend** (if `backend/` exists)
-   - Define API contracts first
-   - Implement business logic and storage
-   - Verify: `make test` passes
-   - Document in `backend/learned/<feature>.md`
+   - Define and implement API
+   - Verify: `make test`
+   - Write contract: `backend/.cursor/skills/add-feature/learned/<feature>.md`
 
-2. **Web** (if `web/` exists)
-   - Consume backend API from contracts
-   - Implement frontend features
-   - Verify: `npm run build` succeeds
+2. **Web** (if `web/` exists) — **mandatory when the folder exists**
+   - Consume the backend contract (do not invent endpoints)
+   - Feature folder + page + route + sidebar
+   - Verify: `npm run build`
+   - Do not call the feature done after backend only
 
 3. **App** (if `app/` exists)
-   - Consume backend API from contracts
-   - Implement mobile features
-   - Verify: `flutter analyze` succeeds
+   - Consume the same backend contract
+   - Verify: `flutter analyze`
 
 ## Rules
 
-- **No parallelization**: Complete one stack before starting the next
-- **Backend first**: Web and app depend on backend API contracts
-- **Surgical scope**: Each subagent touches only its folder; no cross-stack refactors
-- **Verify at each phase**: Run stack-specific tests before advancing
+- No parallelization of the same feature across stacks
+- Backend contracts before web/app UI
+- Each agent/subagent touches only one stack folder
+- Verify before advancing
+- Skip only stacks that are not present on disk
 
-## Coordination
+## Skill
 
-Use `.cursor/skills/add-feature-fullstack/SKILL.md` to automate stack coordination. It enforces this order and ensures verification between phases.
+Use `.cursor/skills/add-feature-fullstack/SKILL.md` to coordinate phases.

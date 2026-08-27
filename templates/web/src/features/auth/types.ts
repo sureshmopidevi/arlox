@@ -4,12 +4,12 @@ export interface LoginCredentials {
 }
 
 export interface AuthUser {
-  id: string
+  id: number
   email: string
   name?: string
 }
 
 export interface AuthResponse {
-  accessToken: string
+  token: string
   user: AuthUser
 }
