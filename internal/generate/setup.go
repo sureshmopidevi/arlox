@@ -11,35 +11,44 @@ import (
 )
 
 // finalizeStack installs dependencies and runs one-time setup after templates render.
-func finalizeStack(stack workspace.Stack, stackDir string, data Data) error {
+// Non-fatal issues (like offline package install failure) return a warning string without failing.
+func finalizeStack(stack workspace.Stack, stackDir string, data Data) (string, error) {
 	switch stack {
 	case workspace.Backend:
-		if err := runInDir(stackDir, "go", "mod", "tidy"); err != nil {
-			return fmt.Errorf("go mod tidy: %w", err)
-		}
 		if err := copyIfMissing(
 			filepath.Join(stackDir, "configs/local/app.env.example"),
 			filepath.Join(stackDir, "configs/local/app.env"),
 		); err != nil {
-			return err
+			return "", err
+		}
+		var warning string
+		if err := runInDir(stackDir, "go", "mod", "tidy"); err != nil {
+			warning = "go mod tidy skipped/failed (offline or network error) — run: make backend.tidy"
 		}
 		tryPostgresSetup(data.Name)
+		return warning, nil
+
 	case workspace.Web:
-		if err := runInDir(stackDir, "npm", "install", "--no-audit", "--no-fund"); err != nil {
-			return fmt.Errorf("npm install: %w", err)
-		}
 		if err := copyIfMissing(
 			filepath.Join(stackDir, ".env.example"),
 			filepath.Join(stackDir, ".env"),
 		); err != nil {
-			return err
+			return "", err
 		}
+		var warning string
+		if err := runInDir(stackDir, "npm", "install", "--no-audit", "--no-fund"); err != nil {
+			warning = "npm install skipped/failed (offline or network error) — run: make web.install"
+		}
+		return warning, nil
+
 	case workspace.App:
+		var warning string
 		if err := runInDir(stackDir, "flutter", "pub", "get"); err != nil {
-			return fmt.Errorf("flutter pub get: %w", err)
+			warning = "flutter pub get skipped/failed (offline or network error) — run: make app.get"
 		}
+		return warning, nil
 	}
-	return nil
+	return "", nil
 }
 
 func runInDir(dir, name string, args ...string) error {

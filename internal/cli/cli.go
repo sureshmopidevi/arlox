@@ -179,13 +179,16 @@ func promptStacks(available []workspace.Stack) ([]workspace.Stack, error) {
 }
 
 type stackResult struct {
-	created []string
-	skipped []string
-	failed  []string
+	created  []string
+	warnings map[string]string
+	skipped  []string
+	failed   []string
 }
 
 func executeStacks(root string, stacks []workspace.Stack, data generate.Data) stackResult {
-	var r stackResult
+	r := stackResult{
+		warnings: make(map[string]string),
+	}
 	for _, s := range stacks {
 		if workspace.StackExists(root, s) {
 			ui.Progress(string(s), "skipped")
@@ -199,7 +202,8 @@ func executeStacks(root string, stacks []workspace.Stack, data generate.Data) st
 			continue
 		}
 		ui.Progress(string(s), "generating")
-		if err := generate.Stack(root, s, data); err != nil {
+		warn, err := generate.Stack(root, s, data)
+		if err != nil {
 			ui.Progress(string(s), "failed")
 			ui.Error(err.Error())
 			r.failed = append(r.failed, string(s))
@@ -211,7 +215,12 @@ func executeStacks(root string, stacks []workspace.Stack, data generate.Data) st
 			r.failed = append(r.failed, string(s))
 			continue
 		}
-		ui.Progress(string(s), "done")
+		if warn != "" {
+			ui.Progress(string(s), "warning")
+			r.warnings[string(s)] = warn
+		} else {
+			ui.Progress(string(s), "done")
+		}
 		r.created = append(r.created, string(s))
 	}
 	return r
@@ -303,6 +312,7 @@ func runGenerate(root, name string, f stackFlags, opts generateOpts) error {
 		Name:       name,
 		Root:       root,
 		Stacks:     result.created,
+		Warnings:   result.warnings,
 		Skipped:    result.skipped,
 		Failed:     result.failed,
 		OpenCmd:    openCmd,
