@@ -63,10 +63,13 @@ arlox create myapp
 ```bash
 arlox                         # help
 arlox version                 # print version (also: arlox -v)
+arlox doctor                  # check toolchains (go, node, npm, flutter, git) & PATH
 arlox upgrade                 # git pull + rebuild + reinstall from ~/arlox
 arlox create myapp            # interactive — pick stacks, shows path first
 arlox create myapp --backend --web --app
 cd myapp && arlox add --app   # add stacks later
+cd myapp && arlox repair      # audit & restore missing configs, rules, or deps
+arlox uninstall               # remove arlox and legacy binaries from PATH
 make verify                   # dev smoke test (temp dir only, auto-deleted)
 make help
 ```

@@ -48,8 +48,11 @@ func buildRoot() *cobra.Command {
 	root.AddCommand(create)
 	root.AddCommand(addCmd())
 	root.AddCommand(skillsCmd())
-	root.AddCommand(versionCmd())
+	root.AddCommand(repairCmd())
+	root.AddCommand(doctorCmd())
 	root.AddCommand(upgradeCmd())
+	root.AddCommand(uninstallCmd())
+	root.AddCommand(versionCmd())
 	return root
 }
 
