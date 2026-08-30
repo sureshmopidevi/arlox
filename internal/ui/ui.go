@@ -29,6 +29,7 @@ var (
 	styleWeb       = lipgloss.NewStyle().Foreground(lipgloss.Color("#5BC8E5")).Bold(true)
 	styleApp       = lipgloss.NewStyle().Foreground(lipgloss.Color("#C678DD")).Bold(true)
 	styleSkip      = lipgloss.NewStyle().Foreground(lipgloss.Color("#E5C07B")).Faint(true)
+	styleWarning   = lipgloss.NewStyle().Foreground(lipgloss.Color("#E5C07B")).Bold(true)
 	styleError     = lipgloss.NewStyle().Foreground(lipgloss.Color("#E06C75")).Bold(true)
 	styleSuccess   = lipgloss.NewStyle().Foreground(lipgloss.Color("#98C379")).Bold(true)
 	styleMuted     = lipgloss.NewStyle().Faint(true)
@@ -73,6 +74,8 @@ func Progress(stack, status string) {
 		statusStr = render(styleMuted, "generating…")
 	case "done":
 		statusStr = render(styleSuccess, "done")
+	case "warning":
+		statusStr = render(styleWarning, "done (setup pending)")
 	case "skipped":
 		statusStr = render(styleSkip, "skipped (already exists)")
 	case "failed":
@@ -89,6 +92,7 @@ type SummaryOpts struct {
 	Name       string
 	Root       string
 	Stacks     []string
+	Warnings   map[string]string // stack -> warning message
 	Skipped    []string
 	Failed     []string
 	OpenCmd    string
@@ -132,6 +136,9 @@ func Summary(opts SummaryOpts) {
 	for _, s := range opts.Stacks {
 		cmd := nextCommand(prefix, s)
 		fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", s)), render(stackStyle(s), cmd))
+		if warnMsg, ok := opts.Warnings[s]; ok && warnMsg != "" {
+			fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", "")), render(styleWarning, "↳ "+warnMsg))
+		}
 	}
 	for _, s := range opts.Skipped {
 		fmt.Printf("  %s   %s\n", render(styleMuted, fmt.Sprintf("%-12s", s)), render(styleSkip, "skipped (already exists)"))
@@ -163,6 +170,10 @@ func nextCommand(prefix, stack string) string {
 
 func Error(msg string) {
 	fmt.Fprintf(os.Stderr, "%s %s\n", render(styleError, "error"), msg)
+}
+
+func Warn(msg string) {
+	fmt.Fprintf(os.Stderr, "%s %s\n", render(styleWarning, "warning"), msg)
 }
 
 func Success(msg string) {

@@ -33,25 +33,26 @@ func HasTool(name string) bool {
 }
 
 // Stack generates the given stack under root using embedded templates.
-// On failure after creating the stack directory, the directory is removed.
-func Stack(root string, stack workspace.Stack, data Data) error {
+// On fatal error during template scaffolding, the directory is cleaned up.
+// Non-fatal post-scaffold issues (e.g. offline package installs) return a warning string.
+func Stack(root string, stack workspace.Stack, data Data) (string, error) {
 	switch stack {
 	case workspace.Backend:
 		if !HasTool("go") {
-			return fmt.Errorf("go not found in PATH")
+			return "", fmt.Errorf("go not found in PATH")
 		}
 	case workspace.Web:
 		if !HasTool("node") || !HasTool("npm") {
-			return fmt.Errorf("node and npm are required for the web stack")
+			return "", fmt.Errorf("node and npm are required for the web stack")
 		}
 	case workspace.App:
 		if !HasTool("flutter") {
-			return fmt.Errorf("flutter not found in PATH")
+			return "", fmt.Errorf("flutter not found in PATH")
 		}
 	}
 
 	if !HasTool("git") {
-		return fmt.Errorf("git not found in PATH")
+		return "", fmt.Errorf("git not found in PATH")
 	}
 
 	stackName := string(stack)
@@ -60,7 +61,7 @@ func Stack(root string, stack workspace.Stack, data Data) error {
 	created := false
 	if _, err := os.Stat(stackDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(stackDir, 0o755); err != nil {
-			return err
+			return "", err
 		}
 		created = true
 	}
@@ -80,23 +81,28 @@ func Stack(root string, stack workspace.Stack, data Data) error {
 			".")
 		cmd.Dir = stackDir
 		if out, err := cmd.CombinedOutput(); err != nil {
-			return cleanup(fmt.Errorf("flutter create: %w\n%s", err, out))
+			return "", cleanup(fmt.Errorf("flutter create: %w\n%s", err, out))
 		}
 	}
 
 	if err := renderTemplates(tmplfs.FS, stackName, stackDir, data); err != nil {
-		return cleanup(err)
+		return "", cleanup(err)
 	}
 
-	if err := finalizeStack(stack, stackDir, data); err != nil {
-		return cleanup(err)
+	warn, err := finalizeStack(stack, stackDir, data)
+	if err != nil {
+		return "", cleanup(err)
 	}
 
 	if err := workspace.InitGit(stackDir); err != nil {
-		return cleanup(fmt.Errorf("git init: %w", err))
+		return "", cleanup(fmt.Errorf("git init: %w", err))
 	}
 
-	return writeManifest(stackDir, stackName)
+	if err := writeManifest(stackDir, stackName); err != nil {
+		return "", cleanup(err)
+	}
+
+	return warn, nil
 }
 
 // WorkspaceRoot renders workspace-level templates (README, .cursor, etc.) into root.
@@ -205,13 +211,13 @@ func renderTemplates(fsys fs.FS, srcDir, destDir string, data Data) error {
 func mapTemplatePath(rel string) string {
 	parts := strings.Split(rel, string(filepath.Separator))
 	for i, p := range parts {
-		switch p {
-		case "cursor":
+		switch {
+		case p == "cursor":
 			parts[i] = ".cursor"
-		case "gitignore":
+		case p == "gitignore":
 			parts[i] = ".gitignore"
-		case "env.example":
-			parts[i] = ".env.example"
+		case strings.HasPrefix(p, "env.example"):
+			parts[i] = "." + p
 		}
 	}
 	return filepath.Join(parts...)
