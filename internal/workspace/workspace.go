@@ -57,7 +57,7 @@ func ValidateName(name string) error {
 }
 
 // DetectWorkspace returns the workspace root if a *.code-workspace file exists
-// in cwd or any parent directory.
+// in cwd or any parent directory, or if cwd contains stack directories.
 func DetectWorkspace(cwd string) (string, bool) {
 	dir := cwd
 	for {
@@ -69,6 +69,9 @@ func DetectWorkspace(cwd string) (string, bool) {
 			if !e.IsDir() && strings.HasSuffix(e.Name(), ".code-workspace") {
 				return dir, true
 			}
+		}
+		if len(ListPresentStacks(dir)) > 0 {
+			return dir, true
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {

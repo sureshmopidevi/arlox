@@ -29,25 +29,29 @@ Building fullstack products often requires managing separate stacks (API backend
 
 ## Installation
 
-### Option 1: Go Install (Recommended for external users — no git clone needed)
+### Option 1: 1-Line Installer (Recommended — Zero Manual PATH Setup)
 
-If you have Go installed (Go 1.22+; generated backend stacks use Go 1.22+):
+Installs `arlox`, automatically links it into your system `$PATH`, and persists configuration in your shell rc:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sureshmopidevi/arlox/main/install.sh | bash
+```
+
+### Option 2: Go Install (Direct compile via Go toolchain)
+
+If you already have `~/go/bin` configured in your PATH:
 
 ```bash
 go install github.com/sureshmopidevi/arlox/cmd/arlox@latest
 ```
 
-Make sure `~/go/bin` is in your `PATH` (e.g. `export PATH="$HOME/go/bin:$PATH"` in your `~/.zshrc` or `~/.bashrc`).
-
-### Option 2: From Source (For contributors / local development)
+### Option 3: From Source (For contributors / local development)
 
 ```bash
 git clone https://github.com/sureshmopidevi/arlox.git ~/arlox
 cd ~/arlox
-source ./install.sh
+./install.sh
 ```
-
-This builds, installs to `~/go/bin`, ensures Go bin is in `~/.zshrc`, and makes `arlox` available immediately in your current terminal session.
 
 Then create a project:
 
@@ -63,10 +67,13 @@ arlox create myapp
 ```bash
 arlox                         # help
 arlox version                 # print version (also: arlox -v)
+arlox doctor                  # check toolchains (go, node, npm, flutter, git) & PATH
 arlox upgrade                 # git pull + rebuild + reinstall from ~/arlox
 arlox create myapp            # interactive — pick stacks, shows path first
 arlox create myapp --backend --web --app
 cd myapp && arlox add --app   # add stacks later
+cd myapp && arlox repair      # audit & restore missing configs, rules, or deps
+arlox uninstall               # remove arlox and legacy binaries from PATH
 make verify                   # dev smoke test (temp dir only, auto-deleted)
 make help
 ```
