@@ -34,6 +34,13 @@ if [[ ! -x "${INSTALLED}" ]]; then
   return 1 2>/dev/null || exit 1
 fi
 
+# Auto-link to system bin if writable so arlox works instantly in all terminals
+for sysdir in "/opt/homebrew/bin" "/usr/local/bin"; do
+  if [[ -d "${sysdir}" && -w "${sysdir}" ]]; then
+    ln -sf "${INSTALLED}" "${sysdir}/arlox" 2>/dev/null && echo "→ linked to ${sysdir}/arlox (instant PATH access)" && break
+  fi
+done
+
 # Permanent PATH in ~/.zshrc (idempotent)
 if [[ -f "${ZSHRC}" ]] && ! grep -qE '(go/bin|GOPATH/bin)' "${ZSHRC}" 2>/dev/null; then
   echo "→ adding ${GOPATH_BIN} to ~/.zshrc"
