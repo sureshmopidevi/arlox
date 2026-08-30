@@ -1,9 +1,29 @@
 # arlox
 
-Scaffold multi-stack workspaces with **Cursor rules and skills** baked in.
+> **Status: Active Development 🚧**
+> `arlox` is currently in active development. APIs, CLI commands, and template architectures are evolving rapidly. Feedback, issues, and contributions are welcome!
+
+Scaffold and orchestrate modern **multi-stack workspaces** (Go backend, React/Vite web, and Flutter mobile app) with unified `.code-workspace` configurations, root `Makefile` automation, and **AI Agent guardrails** (Cursor & Antigravity rules and skills) baked in.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.22%2B-00ADD8?logo=go)](go.mod)
+
+---
+
+## 🎯 What is arlox intended for?
+
+Building fullstack products often requires managing separate stacks (API backend, web dashboard, and mobile client) with repetitive setup, conflicting configs, and inconsistent developer workflows. 
+
+`arlox` solves this by giving you:
+
+* **Production-ready Scaffolds:**
+  * 🐹 **Backend:** Go + Gin REST API with JWT auth, GORM/PostgreSQL migrations, health checks, and modular architecture.
+  * ⚛️ **Web:** Vite + React + TypeScript + Tailwind CSS with Zustand session state, React Query, and auth routing.
+  * 📱 **Mobile App:** Flutter app with clean navigation, Dio networking, secure storage, and Material 3 design.
+* **Unified Workspace:** Single `.code-workspace` tailored for **Cursor**, **VS Code**, and **Antigravity IDE**.
+* **One-Command Orchestration:** Root `Makefile` with `make dev` (starts backend, health-polls until ready, and launches web frontend), `make test`, `make doctor`, and `make status`.
+* **AI Agent Guardrails:** Pre-configured `.cursor/rules`, Karpathy-style engineering guidelines, `AGENTS.md`, and self-documenting `.cursor/skills` in each stack so AI coding assistants write clean, consistent code.
+* **Modular Stack Management:** Generate all stacks together or start small and incrementally add stacks later with `arlox add`.
 
 ---
 
