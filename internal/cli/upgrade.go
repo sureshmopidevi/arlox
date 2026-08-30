@@ -28,9 +28,9 @@ func upgradeCmd() *cobra.Command {
 
 Looks for the source repo in this order:
   1. --source <path>
-  2. $ARLOX_HOME (or $VIBEIT_HOME)
+  2. $ARLOX_HOME
   3. current directory (if it is the arlox repo)
-  4. ~/arlox (or ~/vibeit)
+  4. ~/arlox
 
 By default runs git pull --ff-only before building. Use --no-pull to skip.`,
 		Args: cobra.NoArgs,
@@ -98,14 +98,11 @@ func findArloxSource(explicit string) (string, error) {
 	if v := strings.TrimSpace(os.Getenv("ARLOX_HOME")); v != "" {
 		candidates = append(candidates, v)
 	}
-	if v := strings.TrimSpace(os.Getenv("VIBEIT_HOME")); v != "" {
-		candidates = append(candidates, v)
-	}
 	if cwd, err := os.Getwd(); err == nil {
 		candidates = append(candidates, cwd)
 	}
 	if home, err := os.UserHomeDir(); err == nil {
-		candidates = append(candidates, filepath.Join(home, "arlox"), filepath.Join(home, "vibeit"))
+		candidates = append(candidates, filepath.Join(home, "arlox"))
 	}
 
 	seen := map[string]bool{}

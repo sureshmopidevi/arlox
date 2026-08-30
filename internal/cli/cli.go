@@ -75,13 +75,18 @@ type stackFlags struct {
 }
 
 func bindStackFlags(cmd *cobra.Command, f *stackFlags) {
+	bindAddFlags(cmd, f)
+	cmd.Flags().StringVar(&f.module, "module", "", "Go module path (default: github.com/example/<name>-backend)")
+	cmd.Flags().StringVar(&f.org, "org", "com.example", "Flutter org identifier")
+	cmd.Flags().StringVar(&f.out, "out", "", "parent directory for workspace (default: current directory)")
+}
+
+// bindAddFlags binds only the flags relevant to the add subcommand.
+func bindAddFlags(cmd *cobra.Command, f *stackFlags) {
 	cmd.Flags().BoolVar(&f.backend, "backend", false, "include backend (Go) stack")
 	cmd.Flags().BoolVar(&f.web, "web", false, "include web (React/TS) stack")
 	cmd.Flags().BoolVar(&f.app, "app", false, "include app (Flutter) stack")
 	cmd.Flags().BoolVar(&f.open, "open", false, "open workspace in Cursor, VS Code, or Antigravity IDE after creation")
-	cmd.Flags().StringVar(&f.module, "module", "", "Go module path (default: github.com/example/<name>-backend)")
-	cmd.Flags().StringVar(&f.org, "org", "com.example", "Flutter org identifier")
-	cmd.Flags().StringVar(&f.out, "out", "", "parent directory for workspace (default: current directory)")
 }
 
 func selectedStacks(f stackFlags) []workspace.Stack {
@@ -388,15 +393,17 @@ func addCmd() *cobra.Command {
 			}
 
 			wsFile := workspace.FindWorkspaceFile(root)
+			if wsFile == "" {
+				ui.Error("workspace directory found but .code-workspace file is missing")
+				return fmt.Errorf("missing .code-workspace file in %s", root)
+			}
 			name := strings.TrimSuffix(filepath.Base(wsFile), ".code-workspace")
 
 			ui.Header("add", name)
 
-			if wsFile != "" {
-				if err := workspace.SyncWorkspaceFolders(wsFile, root); err != nil {
-					ui.Error("failed to update workspace file: " + err.Error())
-					return err
-				}
+			if err := workspace.SyncWorkspaceFolders(wsFile, root); err != nil {
+				ui.Error("failed to update workspace file: " + err.Error())
+				return err
 			}
 
 			if len(workspace.ListMissingStacks(root)) == 0 {
@@ -408,7 +415,7 @@ func addCmd() *cobra.Command {
 		},
 	}
 
-	bindStackFlags(cmd, &f)
+	bindAddFlags(cmd, &f)
 	return cmd
 }
 

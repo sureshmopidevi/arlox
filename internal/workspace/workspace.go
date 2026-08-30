@@ -162,6 +162,7 @@ func WriteWorkspaceFile(path, name string, folders []string) error {
 	if err != nil {
 		return err
 	}
+	data = append(data, '\n')
 	return os.WriteFile(path, data, 0o644)
 }
 
@@ -248,6 +249,7 @@ func MergeWorkspaceFolders(wsPath string, newFolders []string) error {
 	if err != nil {
 		return err
 	}
+	out = append(out, '\n')
 	return os.WriteFile(wsPath, out, 0o644)
 }
 

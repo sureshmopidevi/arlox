@@ -155,6 +155,8 @@ func updateCursorFromTemplate(destRoot, srcDir, _ string, force bool) error {
 }
 
 // renderTemplates walks the embedded FS under srcDir and writes rendered files to destDir.
+// Files with a .tmpl suffix are parsed through Go's text/template engine;
+// all other files are copied verbatim.
 func renderTemplates(fsys fs.FS, srcDir, destDir string, data Data) error {
 	return fs.WalkDir(fsys, srcDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -175,6 +177,11 @@ func renderTemplates(fsys fs.FS, srcDir, destDir string, data Data) error {
 		raw, err := fs.ReadFile(fsys, path)
 		if err != nil {
 			return err
+		}
+
+		// Only .tmpl files are rendered through the template engine.
+		if !strings.HasSuffix(path, ".tmpl") {
+			return os.WriteFile(dest, raw, 0o644)
 		}
 
 		tmpl, err := template.New(path).Delims("[[", "]]").Parse(string(raw))
@@ -205,8 +212,6 @@ func mapTemplatePath(rel string) string {
 			parts[i] = ".gitignore"
 		case "env.example":
 			parts[i] = ".env.example"
-		case "env.example.tmpl":
-			parts[i] = ".env.example.tmpl"
 		}
 	}
 	return filepath.Join(parts...)

@@ -29,17 +29,12 @@ ensure_arlox_path() {
   return 1
 }
 
-# Backward compatibility alias
-ensure_vibeit_path() {
-  ensure_arlox_path
-}
 
 # Optional: common local tool paths (only append if dir exists and not already on PATH)
 ensure_local_tool_paths() {
   local dir
   for dir in \
     "$(go env GOPATH)/bin" \
-    "${HOME}/development/flutter/bin" \
     "/opt/homebrew/bin" \
     "/usr/local/bin"; do
     if [[ -d "${dir}" && ":${PATH}:" != *":${dir}:"* ]]; then
