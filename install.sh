@@ -1,76 +1,83 @@
 #!/usr/bin/env bash
-# One-step arlox setup: build, install, add to PATH (~/.zshrc + current shell if sourced).
+# One-step arlox installer for macOS & Linux.
 #
-# Usage (recommended — works immediately in this terminal):
-#   cd ~/arlox && source ./install.sh
+# Remote 1-line install for any user (recommended):
+#   curl -fsSL https://raw.githubusercontent.com/sureshmopidevi/arlox/main/install.sh | bash
 #
-# Or:
-#   ./install.sh          # installs; open a new terminal tab after
+# Local install from cloned repository:
+#   cd ~/arlox && ./install.sh
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-GOPATH_BIN="$(go env GOPATH)/bin"
-INSTALLED="${GOPATH_BIN}/arlox"
-ZSHRC="${HOME}/.zshrc"
-SOURCED=0
-[[ "${BASH_SOURCE[0]:-}" != "${0:-install.sh}" ]] && SOURCED=1
-
 echo ""
-echo "== arlox install =="
+echo "== arlox installer =="
 
 if ! command -v go >/dev/null 2>&1; then
-  echo "error: go not found. Install Go first: https://go.dev/dl/" >&2
-  return 1 2>/dev/null || exit 1
+  echo "error: Go is required to install arlox." >&2
+  echo "Please install Go first: https://go.dev/dl/" >&2
+  exit 1
 fi
 
-echo "→ building..."
-(cd "${ROOT}" && go build -o bin/arlox ./cmd/arlox)
+GOPATH_BIN="$(go env GOPATH)/bin"
+INSTALLED="${GOPATH_BIN}/arlox"
 
-echo "→ installing to ${INSTALLED}..."
-(cd "${ROOT}" && go install ./cmd/arlox)
+# 1. Build and install arlox
+SCRIPT_DIR=""
+if [[ -f "${BASH_SOURCE[0]:-}" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)"
+fi
+
+if [[ -n "${SCRIPT_DIR}" && -f "${SCRIPT_DIR}/cmd/arlox/main.go" ]]; then
+  echo "→ building from local source in ${SCRIPT_DIR}..."
+  (cd "${SCRIPT_DIR}" && go build -o bin/arlox ./cmd/arlox)
+  (cd "${SCRIPT_DIR}" && go install ./cmd/arlox)
+else
+  echo "→ installing latest release via go install..."
+  go install github.com/sureshmopidevi/arlox/cmd/arlox@latest
+fi
 
 if [[ ! -x "${INSTALLED}" ]]; then
-  echo "error: install failed — ${INSTALLED} missing" >&2
-  return 1 2>/dev/null || exit 1
+  echo "error: install failed — ${INSTALLED} not found" >&2
+  exit 1
 fi
 
-# Auto-link to system bin if writable so arlox works instantly in all terminals
+# 2. Automatically link to system bin if writable (instant global PATH access in all terminals)
+LINKED=0
 for sysdir in "/opt/homebrew/bin" "/usr/local/bin"; do
   if [[ -d "${sysdir}" && -w "${sysdir}" ]]; then
-    ln -sf "${INSTALLED}" "${sysdir}/arlox" 2>/dev/null && echo "→ linked to ${sysdir}/arlox (instant PATH access)" && break
+    if ln -sf "${INSTALLED}" "${sysdir}/arlox" 2>/dev/null; then
+      echo "→ linked to ${sysdir}/arlox (instant global PATH access)"
+      LINKED=1
+      break
+    fi
   fi
 done
 
-# Permanent PATH in ~/.zshrc (idempotent)
-if [[ -f "${ZSHRC}" ]] && ! grep -qE '(go/bin|GOPATH/bin)' "${ZSHRC}" 2>/dev/null; then
-  echo "→ adding ${GOPATH_BIN} to ~/.zshrc"
-  cat >> "${ZSHRC}" <<EOF
+# 3. Permanently persist to shell rc files (~/.zshrc, ~/.bashrc)
+SHELL_CONFIGS=("${HOME}/.zshrc" "${HOME}/.bashrc" "${HOME}/.config/fish/config.fish")
+PERSISTED=0
 
-# Go (go install → \$(go env GOPATH)/bin) — added by arlox install.sh
+for rc in "${SHELL_CONFIGS[@]}"; do
+  if [[ -f "${rc}" ]]; then
+    if ! grep -qE '(go/bin|GOPATH/bin)' "${rc}" 2>/dev/null; then
+      echo "→ adding ${GOPATH_BIN} to ${rc}"
+      cat >> "${rc}" <<EOF
+
+# Go bin (added by arlox installer)
 export PATH="${GOPATH_BIN}:\$PATH"
 EOF
-elif [[ -f "${ZSHRC}" ]]; then
-  echo "→ ~/.zshrc already has Go bin on PATH"
-else
-  echo "→ no ~/.zshrc found (skipped PATH persist)"
-fi
+      PERSISTED=1
+    fi
+  fi
+done
 
-# Current shell — works when: source ./install.sh
+# Export for current subshell
 export PATH="${GOPATH_BIN}:${PATH}"
 
 echo ""
-echo "✓ arlox installed: ${INSTALLED}"
-echo "✓ version: $("${INSTALLED}" version 2>/dev/null || "${INSTALLED}" -v)"
+echo "✓ arlox installed successfully!"
+echo "✓ location : ${INSTALLED}"
+echo "✓ version  : $("${INSTALLED}" version 2>/dev/null || "${INSTALLED}" -v)"
 echo ""
-
-if [[ "${SOURCED}" -eq 1 ]]; then
-  echo "Ready in this terminal. Try:"
-  echo "  cd ~/Projects && arlox create myapp"
-else
-  echo "Installed. For THIS terminal, run:"
-  echo "  source ./install.sh"
-  echo ""
-  echo "Or open a new terminal tab, then:"
-  echo "  arlox create myapp"
-fi
+echo "Try running:"
+echo "  arlox create myapp"
 echo ""
