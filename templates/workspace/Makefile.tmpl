@@ -27,9 +27,9 @@ help: ## Show available targets
 	@$(MAKE) -s status
 
 status: ## List which stacks exist in this workspace
-	@if [ -f "$(BACKEND_MARKER)" ]; then echo "  backend  yes  ($(BACKEND_DIR)/)"; else echo "  backend  no   (vibeit add --backend)"; fi
-	@if [ -f "$(WEB_MARKER)" ]; then echo "  web      yes  ($(WEB_DIR)/)"; else echo "  web      no   (vibeit add --web)"; fi
-	@if [ -f "$(APP_MARKER)" ]; then echo "  app      yes  ($(APP_DIR)/)"; else echo "  app      no   (vibeit add --app)"; fi
+	@if [ -f "$(BACKEND_MARKER)" ]; then echo "  backend  yes  ($(BACKEND_DIR)/)"; else echo "  backend  no   (arlox add --backend)"; fi
+	@if [ -f "$(WEB_MARKER)" ]; then echo "  web      yes  ($(WEB_DIR)/)"; else echo "  web      no   (arlox add --web)"; fi
+	@if [ -f "$(APP_MARKER)" ]; then echo "  app      yes  ($(APP_DIR)/)"; else echo "  app      no   (arlox add --app)"; fi
 
 setup: ## One-time setup for all present stacks
 	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) backend.setup; else echo "skip backend (not in workspace)"; fi
@@ -97,7 +97,7 @@ dev: ## Start backend (background), wait until ready, then web dev server
 		echo "  Press Ctrl+C to stop backend"; \
 		wait $$backend_pid; \
 	else \
-		echo "nothing to run — add stacks with: vibeit add"; \
+		echo "nothing to run — add stacks with: arlox add"; \
 		exit 1; \
 	fi
 
@@ -116,37 +116,37 @@ test: ## Run tests for all present stacks
 # --- Backend (delegates to backend/Makefile) ---
 
 backend.setup: ## Backend: db + env setup
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
 	@$(MAKE) -C $(BACKEND_DIR) setup
 
 backend.run: ## Backend: run API server
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
 	@$(MAKE) -C $(BACKEND_DIR) run
 
 backend.build: ## Backend: compile server binary
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
 	@$(MAKE) -C $(BACKEND_DIR) build
 
 backend.test: ## Backend: go test ./...
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
 	@$(MAKE) -C $(BACKEND_DIR) test
 
 backend.lint: ## Backend: golangci-lint
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
 	@$(MAKE) -C $(BACKEND_DIR) lint
 
 backend.tidy: ## Backend: go mod tidy
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
 	@$(MAKE) -C $(BACKEND_DIR) tidy
 
 backend.doctor: ## Backend: env + postgres check
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: vibeit add --backend" && exit 1)
+	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
 	@$(MAKE) -C $(BACKEND_DIR) doctor
 
 # --- Web (npm scripts) ---
 
 web.install: ## Web: npm install + seed .env from .env.example
-	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: vibeit add --web" && exit 1)
+	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: arlox add --web" && exit 1)
 	@cd $(WEB_DIR) && npm install
 	@if [ ! -f "$(WEB_DIR)/.env" ] && [ -f "$(WEB_DIR)/.env.example" ]; then \
 		cp "$(WEB_DIR)/.env.example" "$(WEB_DIR)/.env"; \
@@ -154,15 +154,15 @@ web.install: ## Web: npm install + seed .env from .env.example
 	fi
 
 web.dev: ## Web: Vite dev server
-	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: vibeit add --web" && exit 1)
+	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: arlox add --web" && exit 1)
 	@cd $(WEB_DIR) && npm run dev
 
 web.build: ## Web: production build
-	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: vibeit add --web" && exit 1)
+	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: arlox add --web" && exit 1)
 	@cd $(WEB_DIR) && npm run build
 
 web.preview: ## Web: preview production build
-	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: vibeit add --web" && exit 1)
+	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: arlox add --web" && exit 1)
 	@cd $(WEB_DIR) && npm run preview
 
 web.doctor: ## Web: node/npm + deps check
@@ -175,23 +175,23 @@ web.doctor: ## Web: node/npm + deps check
 # --- App (Flutter) ---
 
 app.get: ## App: flutter pub get
-	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: vibeit add --app" && exit 1)
+	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: arlox add --app" && exit 1)
 	@cd $(APP_DIR) && flutter pub get
 
 app.run: ## App: flutter run (interactive — use its own terminal)
-	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: vibeit add --app" && exit 1)
+	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: arlox add --app" && exit 1)
 	@cd $(APP_DIR) && flutter run
 
 app.analyze: ## App: flutter analyze
-	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: vibeit add --app" && exit 1)
+	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: arlox add --app" && exit 1)
 	@cd $(APP_DIR) && flutter analyze
 
 app.test: ## App: flutter test
-	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: vibeit add --app" && exit 1)
+	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: arlox add --app" && exit 1)
 	@cd $(APP_DIR) && flutter test
 
 app.clean: ## App: flutter clean
-	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: vibeit add --app" && exit 1)
+	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: arlox add --app" && exit 1)
 	@cd $(APP_DIR) && flutter clean
 
 app.doctor: ## App: flutter toolchain check

@@ -1,5 +1,5 @@
 ---
-description: Bump vibeit version when shipping changes
+description: Bump arlox version when shipping changes
 alwaysApply: true
 ---
 
@@ -21,10 +21,10 @@ Release version is **`internal/version/VERSION`** (embedded into the CLI via `go
 
 1. Edit `internal/version/VERSION` (semver, no `v` prefix).
 2. Run `go test ./...` and `make verify`.
-3. Reinstall locally: `source ./install.sh` or `vibeit upgrade --no-pull`.
-4. Confirm: `vibeit version` matches `internal/version/VERSION`.
+3. Reinstall locally: `source ./install.sh` or `arlox upgrade --no-pull`.
+4. Confirm: `arlox version` matches `internal/version/VERSION`.
 
 ## Do not
 
 - Bump version in unrelated drive-by commits.
-- Forget to bump when templates change — users rely on `vibeit version` to know what they installed.
+- Forget to bump when templates change — users rely on `arlox version` to know what they installed.

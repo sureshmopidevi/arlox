@@ -10,11 +10,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sureshmopidevi/vibeit/internal/ui"
-	"github.com/sureshmopidevi/vibeit/internal/version"
+	"github.com/sureshmopidevi/arlox/internal/ui"
+	"github.com/sureshmopidevi/arlox/internal/version"
 )
 
-const vibeitModule = "github.com/sureshmopidevi/vibeit"
+const arloxModule = "github.com/sureshmopidevi/arlox"
 
 func upgradeCmd() *cobra.Command {
 	var (
@@ -23,14 +23,14 @@ func upgradeCmd() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "upgrade",
-		Short: "Update vibeit from the local source repo and reinstall",
-		Long: `Rebuild and reinstall vibeit from your local checkout.
+		Short: "Update arlox from the local source repo and reinstall",
+		Long: `Rebuild and reinstall arlox from your local checkout.
 
 Looks for the source repo in this order:
   1. --source <path>
-  2. $VIBEIT_HOME
-  3. current directory (if it is the vibeit repo)
-  4. ~/vibeit
+  2. $ARLOX_HOME (or $VIBEIT_HOME)
+  3. current directory (if it is the arlox repo)
+  4. ~/arlox (or ~/vibeit)
 
 By default runs git pull --ff-only before building. Use --no-pull to skip.`,
 		Args: cobra.NoArgs,
@@ -39,20 +39,20 @@ By default runs git pull --ff-only before building. Use --no-pull to skip.`,
 		},
 	}
 	cmd.Flags().BoolVar(&noPull, "no-pull", false, "skip git pull before building")
-	cmd.Flags().StringVar(&source, "source", "", "path to vibeit source repo (default: $VIBEIT_HOME or ~/vibeit)")
+	cmd.Flags().StringVar(&source, "source", "", "path to arlox source repo (default: $ARLOX_HOME or ~/arlox)")
 	return cmd
 }
 
 func runUpgrade(sourceFlag string, pull bool) error {
 	before := version.Version
-	ui.Header("upgrade", "vibeit "+before)
+	ui.Header("upgrade", "arlox "+before)
 
 	if _, err := exec.LookPath("go"); err != nil {
 		ui.Error("go not found on PATH — install Go first: https://go.dev/dl/")
 		return fmt.Errorf("go required")
 	}
 
-	root, err := findVibeitSource(sourceFlag)
+	root, err := findArloxSource(sourceFlag)
 	if err != nil {
 		ui.Error(err.Error())
 		return err
@@ -69,31 +69,34 @@ func runUpgrade(sourceFlag string, pull bool) error {
 		ui.Dim("git     skipped (--no-pull)")
 	}
 
-	ui.Dim("build   go build → bin/vibeit")
-	if err := runInDir(root, "go", "build", "-o", "bin/vibeit", "./cmd/vibeit"); err != nil {
+	ui.Dim("build   go build → bin/arlox")
+	if err := runInDir(root, "go", "build", "-o", "bin/arlox", "./cmd/arlox"); err != nil {
 		ui.Error("build failed: " + err.Error())
 		return err
 	}
 
 	ui.Dim("install go install → $(go env GOPATH)/bin")
-	if err := runInDir(root, "go", "install", "./cmd/vibeit"); err != nil {
+	if err := runInDir(root, "go", "install", "./cmd/arlox"); err != nil {
 		ui.Error("install failed: " + err.Error())
 		return err
 	}
 
 	after := installedVersion()
 	if after == "" {
-		after = "(unknown — run: vibeit version)"
+		after = "(unknown — run: arlox version)"
 	}
 	ui.Success(fmt.Sprintf("upgraded  %s → %s", before, after))
 	fmt.Println()
 	return nil
 }
 
-func findVibeitSource(explicit string) (string, error) {
+func findArloxSource(explicit string) (string, error) {
 	var candidates []string
 	if explicit != "" {
 		candidates = append(candidates, explicit)
+	}
+	if v := strings.TrimSpace(os.Getenv("ARLOX_HOME")); v != "" {
+		candidates = append(candidates, v)
 	}
 	if v := strings.TrimSpace(os.Getenv("VIBEIT_HOME")); v != "" {
 		candidates = append(candidates, v)
@@ -102,7 +105,7 @@ func findVibeitSource(explicit string) (string, error) {
 		candidates = append(candidates, cwd)
 	}
 	if home, err := os.UserHomeDir(); err == nil {
-		candidates = append(candidates, filepath.Join(home, "vibeit"))
+		candidates = append(candidates, filepath.Join(home, "arlox"), filepath.Join(home, "vibeit"))
 	}
 
 	seen := map[string]bool{}
@@ -115,24 +118,24 @@ func findVibeitSource(explicit string) (string, error) {
 			continue
 		}
 		seen[abs] = true
-		if isVibeitRepo(abs) {
+		if isArloxRepo(abs) {
 			return abs, nil
 		}
 	}
 
-	return "", fmt.Errorf("vibeit source repo not found — set VIBEIT_HOME or pass --source /path/to/vibeit")
+	return "", fmt.Errorf("arlox source repo not found — set ARLOX_HOME or pass --source /path/to/arlox")
 }
 
-func isVibeitRepo(dir string) bool {
+func isArloxRepo(dir string) bool {
 	modPath := filepath.Join(dir, "go.mod")
 	data, err := os.ReadFile(modPath)
 	if err != nil {
 		return false
 	}
-	if !bytes.Contains(data, []byte("module "+vibeitModule)) {
+	if !bytes.Contains(data, []byte("module "+arloxModule)) {
 		return false
 	}
-	if _, err := os.Stat(filepath.Join(dir, "cmd", "vibeit")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "cmd", "arlox")); err != nil {
 		return false
 	}
 	return true
@@ -158,7 +161,7 @@ func runInDir(dir, name string, args ...string) error {
 }
 
 func installedVersion() string {
-	path, err := exec.LookPath("vibeit")
+	path, err := exec.LookPath("arlox")
 	if err != nil {
 		return ""
 	}
@@ -166,7 +169,7 @@ func installedVersion() string {
 	if err != nil {
 		return ""
 	}
-	// "vibeit 0.1.0" → "0.1.0"
+	// "arlox 0.1.0" → "0.1.0"
 	fields := strings.Fields(strings.TrimSpace(string(out)))
 	if len(fields) >= 2 {
 		return fields[len(fields)-1]

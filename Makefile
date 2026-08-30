@@ -1,8 +1,8 @@
 .PHONY: help build install uninstall clean test tidy fmt verify verify-help path doctor run setup
 
 GOPATH_BIN := $(shell go env GOPATH)/bin
-BINARY     := bin/vibeit
-INSTALLED  := $(GOPATH_BIN)/vibeit
+BINARY     := bin/arlox
+INSTALLED  := $(GOPATH_BIN)/arlox
 VERSION    := $(shell tr -d '[:space:]' < internal/version/VERSION)
 export PATH := $(GOPATH_BIN):$(PATH)
 
@@ -23,10 +23,10 @@ install: ## Build + install + PATH (~/.zshrc). Run: source ./install.sh
 	@chmod +x install.sh scripts/env.sh scripts/verify.sh scripts/install-path.sh 2>/dev/null || chmod +x install.sh
 	@./install.sh
 
-build: ## Build ./bin/vibeit only
-	go build -o $(BINARY) ./cmd/vibeit
+build: ## Build ./bin/arlox only
+	go build -o $(BINARY) ./cmd/arlox
 
-uninstall: ## Remove vibeit from $$(go env GOPATH)/bin
+uninstall: ## Remove arlox from $$(go env GOPATH)/bin
 	@if [ -f "$(INSTALLED)" ]; then \
 		rm -f "$(INSTALLED)"; \
 		echo "Removed $(INSTALLED)"; \
@@ -50,8 +50,8 @@ fmt: ## gofmt all Go sources
 path: ## Print export PATH=... for your shell
 	@echo 'export PATH="$(GOPATH_BIN):$$PATH"'
 
-doctor: ## Check go, node, npm, flutter, vibeit on PATH
-	@echo "== vibeit doctor =="
+doctor: ## Check go, node, npm, flutter, arlox on PATH
+	@echo "== arlox doctor =="
 	@echo "GOPATH bin: $(GOPATH_BIN)"
 	@echo "Source version: $(VERSION)"
 	@for tool in go node npm flutter; do \
@@ -61,25 +61,25 @@ doctor: ## Check go, node, npm, flutter, vibeit on PATH
 			printf "  --  %-8s not found\n" "$$tool"; \
 		fi; \
 	done
-	@if command -v vibeit >/dev/null 2>&1; then \
-		printf "  OK  %-8s %s (%s)\n" "vibeit" "$$(command -v vibeit)" "$$(vibeit version 2>/dev/null || true)"; \
+	@if command -v arlox >/dev/null 2>&1; then \
+		printf "  OK  %-8s %s (%s)\n" "arlox" "$$(command -v arlox)" "$$(arlox version 2>/dev/null || true)"; \
 	elif [ -x "./$(BINARY)" ]; then \
-		printf "  OK  %-8s ./$(BINARY) (run: source ./install.sh)\n" "vibeit"; \
+		printf "  OK  %-8s ./$(BINARY) (run: source ./install.sh)\n" "arlox"; \
 	else \
-		printf "  --  %-8s not installed — run: source ./install.sh\n" "vibeit"; \
+		printf "  --  %-8s not installed — run: source ./install.sh\n" "arlox"; \
 	fi
 
-run: build ## Run ./bin/vibeit (ARGS="create demo --backend")
+run: build ## Run ./bin/arlox (ARGS="create demo --backend")
 	./$(BINARY) $(ARGS)
 
 verify: ## Smoke test in $$TMPDIR (auto-deleted; does NOT touch cwd)
 	@chmod +x scripts/env.sh scripts/verify.sh install.sh
 	@$(MAKE) build
 	@./scripts/env.sh 2>/dev/null || true
-	@command -v vibeit >/dev/null 2>&1 || export PATH="$(GOPATH_BIN):$$PATH"; \
+	@command -v arlox >/dev/null 2>&1 || export PATH="$(GOPATH_BIN):$$PATH"; \
 	 chmod +x scripts/verify.sh; ./scripts/verify.sh
 
-verify-help: build ## Print vibeit CLI help
+verify-help: build ## Print arlox CLI help
 	./$(BINARY) --help
 	./$(BINARY) -v
 	./$(BINARY) version

@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# Local smoke test for vibeit. Uses a TEMP directory — nothing in your cwd.
+# Local smoke test for arlox. Uses a TEMP directory — nothing in your cwd.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/env.sh
 source "${ROOT}/scripts/env.sh"
-ensure_vibeit_path
+ensure_arlox_path
 ensure_local_tool_paths
 
-if [[ -x "${ROOT}/bin/vibeit" ]]; then
-  VIBEIT="${ROOT}/bin/vibeit"
+if [[ -x "${ROOT}/bin/arlox" ]]; then
+  ARLOX="${ROOT}/bin/arlox"
 else
-  VIBEIT="$(command -v vibeit)"
+  ARLOX="$(command -v arlox)"
 fi
-WORKDIR="${TMPDIR:-/tmp}/vibeit-verify-$$"
+WORKDIR="${TMPDIR:-/tmp}/arlox-verify-$$"
 DEMO="${WORKDIR}/demo"
 DEMO2="${WORKDIR}/demo2"
 
@@ -24,7 +24,7 @@ trap cleanup EXIT
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  vibeit VERIFY — automated test only                        ║"
+echo "║  arlox VERIFY — automated test only                          ║"
 echo "║  Creates demo projects in a TEMP folder (not your cwd).       ║"
 echo "║  Everything is deleted when this script finishes.             ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
@@ -33,18 +33,18 @@ echo "  temp dir: ${WORKDIR}"
 echo "  (removed automatically on exit — you do NOT need to delete anything)"
 echo ""
 echo "  To create a real project interactively, run:"
-echo "    cd ~/Projects && vibeit create myapp"
+echo "    cd ~/Projects && arlox create myapp"
 echo ""
 
-echo "== vibeit verify =="
-echo "vibeit: ${VIBEIT}"
+echo "== arlox verify =="
+echo "arlox: ${ARLOX}"
 EXPECTED_VERSION="$(tr -d '[:space:]' < "${ROOT}/internal/version/VERSION")"
-GOT_VERSION="$("${VIBEIT}" version)"
-echo "${GOT_VERSION}" | grep -qx "vibeit ${EXPECTED_VERSION}" || {
-  echo "fail: version mismatch — got '${GOT_VERSION}', want 'vibeit ${EXPECTED_VERSION}'"
+GOT_VERSION="$("${ARLOX}" version)"
+echo "${GOT_VERSION}" | grep -qx "arlox ${EXPECTED_VERSION}" || {
+  echo "fail: version mismatch — got '${GOT_VERSION}', want 'arlox ${EXPECTED_VERSION}'"
   exit 1
 }
-echo "$("${VIBEIT}" -v)" | grep -qx "vibeit ${EXPECTED_VERSION}" || {
+echo "$("${ARLOX}" -v)" | grep -qx "arlox ${EXPECTED_VERSION}" || {
   echo "fail: -v mismatch"
   exit 1
 }
@@ -54,7 +54,7 @@ cd "${WORKDIR}"
 
 echo ""
 echo "== 1. create all stacks =="
-NO_COLOR=1 "${VIBEIT}" create demo --backend --web --app
+NO_COLOR=1 "${ARLOX}" create demo --backend --web --app
 
 test -f "${DEMO}/backend/go.mod" || { echo "fail: backend missing"; exit 1; }
 test -f "${DEMO}/backend/go.sum" || { echo "fail: backend go.sum missing"; exit 1; }
@@ -94,7 +94,7 @@ echo "ok"
 
 echo ""
 echo "== 1b. root make status (partial workspace) =="
-NO_COLOR=1 "${VIBEIT}" create demo2 --backend >/dev/null
+NO_COLOR=1 "${ARLOX}" create demo2 --backend >/dev/null
 cd "${DEMO2}"
 STATUS="$(NO_COLOR=1 make status)"
 echo "${STATUS}" | grep -q "backend  yes"
@@ -105,7 +105,7 @@ echo "ok"
 
 echo ""
 echo "== 2. no duplicates =="
-OUT="$(NO_COLOR=1 "${VIBEIT}" create demo --backend --web --app 2>&1)"
+OUT="$(NO_COLOR=1 "${ARLOX}" create demo --backend --web --app 2>&1)"
 echo "${OUT}" | grep -q "skipped (already exists)" || { echo "fail: expected skip"; echo "${OUT}"; exit 1; }
 echo "ok"
 
@@ -119,7 +119,7 @@ data = json.loads(ws.read_text())
 data["folders"] = [f for f in data["folders"] if f["path"] != "web"]
 ws.write_text(json.dumps(data, indent=2) + "\n")
 PY
-NO_COLOR=1 "${VIBEIT}" create demo --backend --web --app >/dev/null
+NO_COLOR=1 "${ARLOX}" create demo --backend --web --app >/dev/null
 python3 - <<PY
 import json, pathlib, sys
 ws = pathlib.Path("${DEMO}/demo.code-workspace")
@@ -132,7 +132,7 @@ echo "ok"
 echo ""
 echo "== 3c. add after partial create =="
 cd "${DEMO2}"
-NO_COLOR=1 "${VIBEIT}" add --web
+NO_COLOR=1 "${ARLOX}" add --web
 test -f "${DEMO2}/web/package.json" || { echo "fail: web not added"; exit 1; }
 grep -q '"web"' "${DEMO2}/demo2.code-workspace" || { echo "fail: workspace not merged"; exit 1; }
 echo "ok"

@@ -3,7 +3,7 @@ package version_test
 import (
 	"testing"
 
-	"github.com/sureshmopidevi/vibeit/internal/version"
+	"github.com/sureshmopidevi/arlox/internal/version"
 )
 
 func TestVersionNonEmpty(t *testing.T) {

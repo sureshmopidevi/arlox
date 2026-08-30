@@ -1,4 +1,4 @@
-# vibeit — Agent Guide
+# arlox — Agent Guide
 
 CLI and template generator for multi-stack workspaces (backend, web, app).
 
@@ -24,7 +24,7 @@ Run `make verify` after bumping. See `.cursor/rules/versioning.mdc` for semver r
 | `internal/version/VERSION` | Release version (single source of truth) |
 | `templates/` | Embedded scaffold (backend, web, app, workspace) |
 | `internal/generate/` | Template render + post-create setup |
-| `scripts/verify.sh` | Smoke test (uses `./bin/vibeit`) |
+| `scripts/verify.sh` | Smoke test (uses `./bin/arlox`) |
 
 ## Verify
 

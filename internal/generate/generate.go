@@ -11,19 +11,19 @@ import (
 	"strings"
 	"text/template"
 
-	tmplfs "github.com/sureshmopidevi/vibeit/templates"
-	"github.com/sureshmopidevi/vibeit/internal/workspace"
+	tmplfs "github.com/sureshmopidevi/arlox/templates"
+	"github.com/sureshmopidevi/arlox/internal/workspace"
 )
 
 // Data holds the template variables for all stacks.
 type Data struct {
-	Name          string
-	DisplayName   string
-	Module        string
-	Package       string
-	Org           string
-	APIURL        string
-	VibeitVersion string
+	Name         string
+	DisplayName  string
+	Module       string
+	Package      string
+	Org          string
+	APIURL       string
+	ArloxVersion string
 }
 
 // HasTool reports whether name is available on PATH.

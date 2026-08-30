@@ -4,7 +4,7 @@ description: >-
   Implements a feature across backend, web, and Flutter app in strict order
   (backend → web → app) with API contracts and verification between phases.
   Use when the user asks to add a full-stack feature, cross-stack feature,
-  feature for backend and web, or anything spanning multiple vibeit stacks.
+  feature for backend and web, or anything spanning multiple arlox stacks.
 ---
 
 # Add Feature Across Stacks

@@ -10,10 +10,10 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
-	"github.com/sureshmopidevi/vibeit/internal/generate"
-	"github.com/sureshmopidevi/vibeit/internal/ui"
-	"github.com/sureshmopidevi/vibeit/internal/version"
-	"github.com/sureshmopidevi/vibeit/internal/workspace"
+	"github.com/sureshmopidevi/arlox/internal/generate"
+	"github.com/sureshmopidevi/arlox/internal/ui"
+	"github.com/sureshmopidevi/arlox/internal/version"
+	"github.com/sureshmopidevi/arlox/internal/workspace"
 )
 
 // Execute builds and runs the root cobra command.
@@ -27,7 +27,7 @@ func buildRoot() *cobra.Command {
 	var f stackFlags
 	create := &cobra.Command{
 		Use:   "create [name]",
-		Short: "Create a new vibeit workspace",
+		Short: "Create a new arlox workspace",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCreate(args, f)
@@ -36,15 +36,15 @@ func buildRoot() *cobra.Command {
 	bindStackFlags(create, &f)
 
 	root := &cobra.Command{
-		Use:     "vibeit",
+		Use:     "arlox",
 		Short:   "Scaffold and manage multi-stack workspaces",
-		Long:    "vibeit create workspaces with backend, web, and/or Flutter stacks plus Cursor rules and skills.",
+		Long:    "arlox create workspaces with backend, web, and/or Flutter stacks plus Cursor rules and skills.",
 		Version: version.Version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
 	}
-	root.SetVersionTemplate("vibeit {{.Version}}\n")
+	root.SetVersionTemplate("arlox {{.Version}}\n")
 	root.AddCommand(create)
 	root.AddCommand(addCmd())
 	root.AddCommand(skillsCmd())
@@ -56,10 +56,10 @@ func buildRoot() *cobra.Command {
 func versionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: "Print vibeit version",
+		Short: "Print arlox version",
 		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("vibeit " + version.Version)
+			fmt.Println("arlox " + version.Version)
 		},
 	}
 }
@@ -106,13 +106,13 @@ func buildData(name string, f stackFlags) generate.Data {
 	// Flutter package names must be snake_case (no hyphens); match project name like web's package.json.
 	pkg := strings.ReplaceAll(name, "-", "_")
 	return generate.Data{
-		Name:          name,
-		DisplayName:   toDisplayName(name),
-		Module:        module,
-		Package:       pkg,
-		Org:           f.org,
-		APIURL:        "http://localhost:8080/api/v1",
-		VibeitVersion: version.Version,
+		Name:         name,
+		DisplayName:  toDisplayName(name),
+		Module:       module,
+		Package:      pkg,
+		Org:          f.org,
+		APIURL:       "http://localhost:8080/api/v1",
+		ArloxVersion: version.Version,
 	}
 }
 
@@ -157,7 +157,7 @@ func promptStacks(available []workspace.Stack) ([]workspace.Stack, error) {
 	var selected []string
 	err := huh.NewForm(huh.NewGroup(
 		huh.NewMultiSelect[string]().
-			Title("What should vibeit generate?").
+			Title("What should arlox generate?").
 			Description("space toggle · enter confirm").
 			Options(opts...).
 			Value(&selected),
@@ -189,7 +189,7 @@ func executeStacks(root string, stacks []workspace.Stack, data generate.Data) st
 		}
 		if workspace.StackPresentButEmpty(root, s) {
 			ui.Progress(string(s), "failed")
-			ui.Error(fmt.Sprintf("%s/ exists but is incomplete — remove it or run vibeit add --%s again after fixing", s, s))
+			ui.Error(fmt.Sprintf("%s/ exists but is incomplete — remove it or run arlox add --%s again after fixing", s, s))
 			r.failed = append(r.failed, string(s))
 			continue
 		}
@@ -202,7 +202,7 @@ func executeStacks(root string, stacks []workspace.Stack, data generate.Data) st
 		}
 		if !workspace.StackExists(root, s) {
 			ui.Progress(string(s), "failed")
-			ui.Error(fmt.Sprintf("%s finished but stack files are missing — try again or run vibeit add --%s", s, s))
+			ui.Error(fmt.Sprintf("%s finished but stack files are missing — try again or run arlox add --%s", s, s))
 			r.failed = append(r.failed, string(s))
 			continue
 		}
@@ -273,7 +273,7 @@ func runGenerate(root, name string, f stackFlags, opts generateOpts) error {
 					return err
 				}
 			}
-			ui.Dim("nothing selected — workspace folder is ready for vibeit add")
+			ui.Dim("nothing selected — workspace folder is ready for arlox add")
 			return nil
 		}
 	}
@@ -332,7 +332,7 @@ func runCreate(args []string, f stackFlags) error {
 	target := filepath.Join(resolveOutDir(cwd, f.out), name)
 
 	if workspace.IsUnrelatedDir(target) {
-		ui.Error(fmt.Sprintf("%s exists and is not a vibeit workspace", target))
+		ui.Error(fmt.Sprintf("%s exists and is not an arlox workspace", target))
 		return fmt.Errorf("aborting: unrelated directory")
 	}
 
@@ -383,8 +383,8 @@ func addCmd() *cobra.Command {
 
 			root, ok := workspace.DetectWorkspace(cwd)
 			if !ok {
-				ui.Error("no vibeit workspace found — run from a workspace root or stack folder")
-				return fmt.Errorf("run vibeit create first")
+				ui.Error("no arlox workspace found — run from a workspace root or stack folder")
+				return fmt.Errorf("run arlox create first")
 			}
 
 			wsFile := workspace.FindWorkspaceFile(root)
@@ -429,8 +429,8 @@ func skillsCmd() *cobra.Command {
 			}
 			root, ok := workspace.DetectWorkspace(cwd)
 			if !ok {
-				ui.Error("no vibeit workspace found — run from a workspace root or stack folder")
-				return fmt.Errorf("run vibeit create first")
+				ui.Error("no arlox workspace found — run from a workspace root or stack folder")
+				return fmt.Errorf("run arlox create first")
 			}
 
 			ui.Header("skills update", root)

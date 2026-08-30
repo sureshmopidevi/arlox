@@ -1,4 +1,4 @@
-module github.com/sureshmopidevi/vibeit
+module github.com/sureshmopidevi/arlox
 
 go 1.26.6
 

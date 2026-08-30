@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sureshmopidevi/vibeit/internal/workspace"
+	"github.com/sureshmopidevi/arlox/internal/workspace"
 )
 
 // finalizeStack installs dependencies and runs one-time setup after templates render.

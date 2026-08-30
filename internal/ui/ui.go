@@ -51,7 +51,7 @@ func stackStyle(stack string) lipgloss.Style {
 
 // Header prints a bold workspace action header.
 func Header(action, name string) {
-	fmt.Printf("\n  %s  %s\n\n", render(styleMuted, "vibeit"), render(styleWorkspace, action+"  "+name))
+	fmt.Printf("\n  %s  %s\n\n", render(styleMuted, "arlox"), render(styleWorkspace, action+"  "+name))
 }
 
 // WorkspaceInfo prints where files will be written (always before generate).
