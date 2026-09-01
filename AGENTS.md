@@ -13,7 +13,7 @@ Bump **`internal/version/VERSION`** when you change:
 
 - `templates/**`
 - `internal/cli`, `internal/generate`, `internal/workspace`, `internal/ui`
-- `scripts/verify.sh`, `install.sh`, or user-facing behavior
+- `docs/**` (when user-facing behavior or CLI docs change materially)
 
 Run `make verify` after bumping. See `.cursor/rules/versioning.mdc` for semver rules.
 
@@ -22,8 +22,10 @@ Run `make verify` after bumping. See `.cursor/rules/versioning.mdc` for semver r
 | Path | Purpose |
 |------|---------|
 | `internal/version/VERSION` | Release version (single source of truth) |
-| `templates/` | Embedded scaffold (backend, web, app, workspace) |
+| `templates/` | Embedded scaffold (backend, web, app, workspace, design-systems) |
+| `templates/design-systems/` | Per-library web UI overlays (tailwind, shadcn, antd, …) |
 | `internal/generate/` | Template render + post-create setup |
+| `docs/` | User documentation (design systems, CLI, workspace guide) |
 | `scripts/verify.sh` | Smoke test (uses `./bin/arlox`) |
 
 ## Verify

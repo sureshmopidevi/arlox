@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/sureshmopidevi/arlox/internal/designsystems"
 	arloxexec "github.com/sureshmopidevi/arlox/internal/exec"
 	tmplfs "github.com/sureshmopidevi/arlox/templates"
 	"github.com/sureshmopidevi/arlox/internal/ui"
@@ -20,14 +21,16 @@ import (
 
 // Data holds the template variables for all stacks.
 type Data struct {
-	Name         string
-	DisplayName  string
-	Module       string
-	Package      string
-	Org          string
-	APIURL       string
-	ArloxVersion string
-	PostgresPort int
+	Name                  string
+	DisplayName           string
+	Module                string
+	Package               string
+	Org                   string
+	APIURL                string
+	ArloxVersion          string
+	PostgresPort          int
+	WebDesignSystem       string
+	WebDesignSystemLabel  string
 }
 
 // HasTool reports whether name is available on PATH.
@@ -90,6 +93,20 @@ func Stack(root string, stack workspace.Stack, data Data) (string, error) {
 
 	if err := renderTemplates(tmplfs.FS, stackName, stackDir, data); err != nil {
 		return "", cleanup(err)
+	}
+
+	if stack == workspace.Web {
+		ds := data.WebDesignSystem
+		if ds == "" {
+			ds = designsystems.DefaultWebID
+		}
+		overlay := designsystems.WebOverlayPath(ds)
+		if err := renderTemplates(tmplfs.FS, overlay, stackDir, data); err != nil {
+			return "", cleanup(fmt.Errorf("design system overlay %s: %w", ds, err))
+		}
+		if err := writeDesignSystemManifest(stackDir, ds); err != nil {
+			return "", cleanup(err)
+		}
 	}
 
 	warn, err := finalizeStack(stack, stackDir, data)

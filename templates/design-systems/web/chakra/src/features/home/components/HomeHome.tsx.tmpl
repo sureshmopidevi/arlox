@@ -1,0 +1,26 @@
+import { Box, Card, CardBody, Heading, Text } from '@chakra-ui/react'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useAuthStore } from '@/stores/authStore'
+
+export function HomeHome() {
+  useDocumentTitle('[[.DisplayName]]')
+  const user = useAuthStore((s) => s.user)
+
+  return (
+    <Box>
+      <Heading size="lg">Welcome to [[.DisplayName]]</Heading>
+      {user && (
+        <Text mt={1} fontSize="sm" color="gray.500">
+          Signed in as {user.email}
+        </Text>
+      )}
+      <Card mt={6} display="inline-block">
+        <CardBody>
+          <Text fontSize="sm" color="gray.600">
+            Your admin console is ready. Add features using the add-feature skill.
+          </Text>
+        </CardBody>
+      </Card>
+    </Box>
+  )
+}

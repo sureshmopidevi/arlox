@@ -24,7 +24,8 @@ Scaffold a vertical feature slice under `lib/features/<name>/`.
 1. Read `.cursor/rules/architecture.mdc`.
 2. Read `.cursor/skills/add-feature-mobile/learned/README.md`.
 3. If backend exists, read:
-   - `../backend/.cursor/skills/add-feature-backend/learned/<feature>.md`
+   - `../../contracts/<feature>.md` (preferred)
+   - or `../backend/.cursor/skills/add-feature-backend/learned/<feature>.md`
 4. Confirm feature name if ambiguous.
 5. Success criteria: route opens, API wired, `flutter analyze` clean.
 
@@ -77,7 +78,7 @@ Feature-scoped Riverpod providers in `presentation/providers/`. Wire:
 
 ### 7. Route
 
-Add a `GoRoute` in `lib/core/router/app_router.dart`.
+Add a `GoRoute` in `lib/core/router/app_router.dart`. Protected routes rely on `authRedirect` — unauthenticated users go to `/login`.
 
 ### 8. Verify
 
@@ -101,7 +102,7 @@ Append to `.cursor/skills/add-feature-mobile/learned/README.md`:
 ## Constraints
 
 - Features must not import other features — shared code goes in `core/`
-- No auth route guards unless requested
+- Auth: login at `/login`; use `authProvider` for session — do not bypass `AuthRepository`
 - Do not invent backend endpoints
 - Surgical diffs only
 

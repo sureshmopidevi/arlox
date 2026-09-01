@@ -22,7 +22,7 @@ Run **one stack at a time**. Never parallelize backend/web/app for the same feat
 
 | Stack | Must prove |
 |-------|------------|
-| Backend | `make test` green + `learned/<feature>.md` with API contract |
+| Backend | `make test` green + `contracts/<feature>.md` API contract |
 | Web | Types + API client + UI + route/nav + `npm run build` green |
 | App | Feature slice + route + `flutter analyze` green |
 
@@ -39,50 +39,38 @@ app/      → Phase 3
 State the plan to the user before coding:
 
 ```text
-1. backend → verify: make test + contract doc
-2. web     → verify: npm run build
-3. app     → verify: flutter analyze
+1. contracts → write contracts/<feature>.md
+2. backend    → verify: make test
+3. web        → verify: npm run build
+4. app        → verify: flutter analyze
 ```
 
 Skip only missing folders. Never skip an existing stack.
+
+## 0. Phase — Contract (always, before backend)
+
+Create or update **`contracts/<feature>.md`** at the workspace root using the format in [`contracts/README.md`](../contracts/README.md).
+
+This is the **canonical contract** for web and app. Optionally mirror a summary in `backend/.cursor/skills/add-feature-backend/learned/<feature>.md`.
+
+Do **not** start backend until `contracts/<feature>.md` exists.
 
 ## 1. Phase — Backend (if `backend/` exists)
 
 Work **only** under `backend/`. Follow `backend/.cursor/skills/add-feature-backend/SKILL.md`.
 
-**Required output before leaving this phase:**
-
-Create `backend/.cursor/skills/add-feature-backend/learned/<feature>.md` with this contract:
-
-```markdown
-# <feature> — API contract
-
-## Endpoints
-| Method | Path | Auth | Request | Response |
-|--------|------|------|---------|----------|
-| POST | /api/v1/<resource> | yes | `{ ... }` | `{ data: { ... } }` |
-
-## Errors
-| Status | When |
-|--------|------|
-| 400 | validation |
-| 401 | missing/invalid token |
-| 404 | not found |
-
-## Notes for web/app
-- Envelope: `{ data: T }` unwrapped by clients
-- Auth header: `Authorization: Bearer <token>`
-```
+Implement endpoints to match **`contracts/<feature>.md`**.
 
 **Verify:** `cd backend && make test`  
-Do **not** start web until this passes and the contract file exists.
+Do **not** start web until backend tests pass.
 
 ## 2. Phase — Web (if `web/` exists)
 
 Work **only** under `web/`. Follow `web/.cursor/skills/add-feature-web/SKILL.md`.
 
-**Must consume the backend contract** from  
-`backend/.cursor/skills/add-feature-backend/learned/<feature>.md` (or ask if missing).
+**Must consume** `contracts/<feature>.md` (or ask if missing).
+
+**Design system:** read `web/.arlox/design-system.json` and follow `web/.cursor/rules/design-system.mdc` — use the same UI library as the scaffold.
 
 **Required deliverables:**
 
@@ -111,7 +99,7 @@ For each phase, use a Task/subagent with:
 ```text
 Scope: only <stack>/ 
 Read: backend → add-feature-backend | web → add-feature-web | app → add-feature-mobile
-Contract: backend/.cursor/skills/add-feature-backend/learned/<feature>.md  (web/mobile)
+Contract: contracts/<feature>.md  (web/mobile)
 Verify: <stack verify command>
 Return: files changed + verify output summary
 ```
@@ -121,7 +109,8 @@ Wait for completion + green verify before launching the next phase.
 ## Anti-patterns
 
 - Building backend only and calling the feature "done" when `web/` exists
-- Starting web/app before backend contract is written
+- Starting backend before `contracts/<feature>.md` exists
+- Starting web/app before backend tests pass
 - Parallel subagents on the same feature
 - Editing multiple stacks in one agent turn
 - Drive-by refactors outside the feature
@@ -132,7 +121,7 @@ Wait for completion + green verify before launching the next phase.
 User: "Add issues list with create form (full stack)"
 
 ```text
-1. Backend: modules/issues + routes + tests → learned/issues.md
+1. Backend: modules/issues + routes + tests (per contracts/issues.md)
 2. Web: features/issues + IssuesPage + /issues nav → npm run build
 3. App: lib/features/issues + GoRoute → flutter analyze
 ```
@@ -140,7 +129,7 @@ User: "Add issues list with create form (full stack)"
 ## Done checklist
 
 - [ ] Every existing stack was implemented (not skipped)
-- [ ] Backend contract doc exists (if backend ran)
+- [ ] `contracts/<feature>.md` exists (if full-stack feature)
 - [ ] Web UI is reachable via route + nav (if web ran)
 - [ ] Each phase verify command passed
 - [ ] No cross-stack drive-by edits

@@ -1,11 +1,13 @@
 # arlox
 
-Scaffold and orchestrate **multi-stack workspaces** — Go backend, React/Vite web, and Flutter app — with a unified IDE workspace, root Makefile, Docker Postgres, and AI agent guardrails built in.
+Scaffold and orchestrate **multi-stack workspaces** — Go backend, React/Vite web, and Flutter app — with a unified IDE workspace, root Makefile, Docker Postgres, optional web design systems, and AI agent guardrails built in.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go)](go.mod)
 
 > **Active development.** CLI commands and templates evolve quickly. Feedback and contributions welcome.
+
+**Documentation:** [docs/](docs/README.md) — [design systems](docs/web-design-systems.md) · [workspace guide](docs/workspace-guide.md) · [CLI reference](docs/cli-reference.md)
 
 ---
 
@@ -15,6 +17,7 @@ Scaffold and orchestrate **multi-stack workspaces** — Go backend, React/Vite w
 - [Prerequisites](#prerequisites)
 - [Install arlox](#install-arlox)
 - [Quick start — your first project](#quick-start--your-first-project)
+- [Web design systems](#web-design-systems)
 - [CLI reference](#cli-reference)
 - [Generated project layout](#generated-project-layout)
 - [Day-to-day workflow](#day-to-day-workflow)
@@ -30,11 +33,13 @@ Scaffold and orchestrate **multi-stack workspaces** — Go backend, React/Vite w
 
 | Layer | What arlox provides |
 |-------|---------------------|
-| **Backend** | Go + Gin REST API, JWT auth, GORM/PostgreSQL, health checks, modular layout |
-| **Web** | React 19 + Vite + TypeScript + Tailwind, Zustand, React Query, Vitest |
-| **App** | Flutter + Riverpod + go_router, Dio, secure storage |
+| **Backend** | Go + Gin REST API, JWT auth module, GORM/PostgreSQL, health checks, modular layout |
+| **Web** | React 19 + Vite + TypeScript — **your choice of design system** (Tailwind, shadcn/ui, Ant Design, MUI, Chakra, Mantine) |
+| **App** | Flutter + Riverpod + go_router, Dio, secure storage, login guards |
 | **Workspace** | `.code-workspace` for Cursor, VS Code, Antigravity IDE |
+| **Contracts** | `contracts/` — shared API docs for full-stack features |
 | **Orchestration** | Root `Makefile` — `make dev`, `make test`, `make doctor`, `make status` |
+| **Brownfield** | `arlox init` — add workspace files to existing repos without touching stack source |
 | **AI guardrails** | `.cursor/rules`, `.cursor/skills`, Karpathy guidelines, `AGENTS.md` per stack |
 
 Start with all stacks or add them later (`arlox add`). Partial workspaces work — missing stacks are skipped automatically.
@@ -95,17 +100,17 @@ arlox version
 
 ### 1. Create a workspace
 
-Interactive (pick stacks in the terminal):
+Interactive (pick stacks, then web design system if web is selected):
 
 ```bash
 cd ~/Projects
 arlox create myapp
 ```
 
-Or specify stacks upfront:
+Or specify everything upfront:
 
 ```bash
-arlox create myapp --backend --web --app
+arlox create myapp --backend --web --app --web-ui shadcn
 ```
 
 Useful flags:
@@ -116,6 +121,7 @@ Useful flags:
 | `--org com.yourcompany` | Flutter org (default: `com.example`) |
 | `--out ~/Projects` | Parent directory for the new folder |
 | `--open` | Open `.code-workspace` in Cursor, VS Code, or Antigravity after create |
+| `--web-ui <id>` | Web UI library when `--web` is included ([details](#web-design-systems)) |
 
 During create you will see **live terminal output** for `go mod tidy`, `npm install`, `flutter create`, etc.
 
@@ -159,7 +165,33 @@ make test           # backend + web (Vitest) + app tests
 
 ---
 
+## Web design systems
+
+When the **web** stack is included, arlox asks which UI library to scaffold (interactive) or accepts `--web-ui` (scripts/CI).
+
+| `--web-ui` | Library | Notes |
+|------------|---------|-------|
+| `tailwind` | Tailwind only | Default in non-interactive mode — utilities, no component library |
+| `shadcn` | shadcn/ui | Tailwind + CSS variables + `components.json` |
+| `antd` | Ant Design | Enterprise admin components |
+| `mui` | Material UI | Material Design |
+| `chakra` | Chakra UI | Accessible component library |
+| `mantine` | Mantine | Full-featured React components |
+
+The choice is saved to **`web/.arlox/design-system.json`**. Agents read this file and `.cursor/rules/design-system.mdc` when adding features — they do not mix libraries.
+
+```bash
+arlox create myapp --web --web-ui shadcn
+arlox add --web --web-ui antd
+```
+
+Full guide: **[docs/web-design-systems.md](docs/web-design-systems.md)**
+
+---
+
 ## CLI reference
+
+Summary below. Full flag list: **[docs/cli-reference.md](docs/cli-reference.md)**
 
 ### Core commands
 
@@ -172,10 +204,14 @@ arlox doctor                  # toolchains, PATH, workspace detection
 ### Create & extend projects
 
 ```bash
-arlox create myapp                    # interactive stack picker
-arlox create myapp --backend --web    # partial workspace
-cd myapp && arlox add --app            # add stacks later
+arlox create myapp                    # interactive stack + design system pickers
+arlox create myapp --backend --web --web-ui shadcn
+cd myapp && arlox add --app           # add stacks later
+arlox init                            # brownfield: workspace files on existing stacks
+arlox init . --name myapp
 ```
+
+`init` detects `backend/`, `web/`, and `app/` by marker files and writes orchestration only (Makefile, `.code-workspace`, `contracts/`, root `.cursor/`). It never overwrites stack source. See **[docs/workspace-guide.md](docs/workspace-guide.md)**.
 
 ### Maintain workspaces
 
@@ -208,10 +244,12 @@ myapp/
   docker-compose.yml        # Postgres 16 (host port unique per project name)
   Makefile                  # orchestrates all stacks
   README.md
+  contracts/                # shared API contracts (auth.md seed + your features)
   .cursor/                  # fullstack skill + rules
 
-  backend/                  # own git repo — Go + Gin + JWT + GORM
-  web/                      # own git repo — React + Vite + Tailwind + Vitest
+  backend/                  # own git repo — Go + Gin
+  web/                      # own git repo — React + chosen design system
+    .arlox/design-system.json
   app/                      # own git repo — Flutter + Riverpod
 ```
 
@@ -239,7 +277,7 @@ Per-stack shortcuts: `make backend.run`, `make web.dev`, `make app.run`, `make w
 Add a stack you skipped at create time:
 
 ```bash
-arlox add --web
+arlox add --web --web-ui shadcn
 ```
 
 ---
@@ -266,11 +304,12 @@ Without Docker, the backend Makefile falls back to Homebrew Postgres + `createdb
 
 arlox is designed for **AI-assisted development** in Cursor and Antigravity:
 
-- **Per-stack rules** — architecture, Tailwind, Makefile conventions, Karpathy guidelines
+- **Per-stack rules** — architecture, design system (web), Makefile conventions, Karpathy guidelines
 - **Skills** — `add-feature-backend`, `add-feature-web`, `add-feature-mobile`, `add-feature-fullstack`
-- **Fullstack order** — backend → web → app, one stack at a time, with API contract docs in `learned/`
+- **Contracts first** — `contracts/<feature>.md` before implementing cross-stack features
+- **Fullstack order** — backend → web → app, one stack at a time
 
-Refresh templates after upgrading arlox:
+Web features must use the design system from `web/.arlox/design-system.json`. Refresh templates after upgrading arlox:
 
 ```bash
 cd myapp && arlox skills update
@@ -288,6 +327,7 @@ Locally modified skill files are preserved unless you pass `--force`.
 | Missing Makefile, `.env`, or `.cursor` files | `cd myapp && arlox repair` |
 | New arlox version, want latest skills | `arlox skills update` |
 | Check what changed vs original scaffold | `arlox repair` (drift section) |
+| Existing repo, need workspace orchestration | `arlox init` |
 | Tooling problems | `arlox doctor` |
 
 ---
@@ -302,13 +342,14 @@ cd ~/arlox
 ./install.sh
 
 make test      # go test ./...
-make verify    # full smoke test in a temp dir (create, build, test, repair, upgrade)
+make verify    # full smoke test in a temp dir (create, build, design systems, repair, upgrade)
 make doctor    # local toolchain check
 ```
 
-Release version: [`internal/version/VERSION`](internal/version/VERSION) (currently **0.11.0**). Bump on every CLI or template change — see [`.cursor/rules/versioning.mdc`](.cursor/rules/versioning.mdc) and [`AGENTS.md`](AGENTS.md).
+Release version: [`internal/version/VERSION`](internal/version/VERSION) (currently **0.15.0**). Bump on every CLI or template change — see [`.cursor/rules/versioning.mdc`](.cursor/rules/versioning.mdc) and [`AGENTS.md`](AGENTS.md).
 
-Manual verification checklist: [`scripts/verify.md`](scripts/verify.md).
+- **Documentation:** [docs/README.md](docs/README.md)
+- **Manual verification:** [scripts/verify.md](scripts/verify.md)
 
 ---
 

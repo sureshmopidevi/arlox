@@ -1,0 +1,8 @@
+[
+  { "id": "tailwind", "label": "Tailwind only", "description": "Utility classes, no component library" },
+  { "id": "shadcn", "label": "shadcn/ui", "description": "Tailwind + Radix primitives and CSS variables" },
+  { "id": "antd", "label": "Ant Design", "description": "Enterprise React UI library" },
+  { "id": "mui", "label": "Material UI", "description": "Google Material Design components" },
+  { "id": "chakra", "label": "Chakra UI", "description": "Accessible component library" },
+  { "id": "mantine", "label": "Mantine", "description": "Full-featured React components" }
+]

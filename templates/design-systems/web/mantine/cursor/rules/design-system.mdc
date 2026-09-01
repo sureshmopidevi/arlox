@@ -1,0 +1,19 @@
+---
+description: Styling conventions — Mantine
+globs:
+  - "src/**/*.{ts,tsx,css}"
+---
+
+# Design system — Mantine
+
+Read `.arlox/design-system.json` — this project uses **Mantine** v7.
+
+## Rules
+
+- Import from `@mantine/core` — Button, TextInput, Paper, Stack, etc.
+- Mantine styles are imported in `providers.tsx` (`@mantine/core/styles.css`).
+- Do not mix antd, MUI, shadcn, or Chakra in the same project.
+
+## Docs
+
+https://mantine.dev/getting-started/

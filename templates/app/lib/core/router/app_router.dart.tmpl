@@ -1,11 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:[[.Package]]/core/router/auth_redirect.dart';
+import 'package:[[.Package]]/features/auth/presentation/providers/auth_providers.dart';
+import 'package:[[.Package]]/features/auth/presentation/screens/login_screen.dart';
 import 'package:[[.Package]]/features/home/presentation/screens/home_screen.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
+  final refresh = ref.watch(routerRefreshProvider);
+
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: refresh,
+    redirect: (context, state) => authRedirect(ref, state.matchedLocation),
     routes: [
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
       GoRoute(
         path: '/',
         builder: (context, state) => const HomeScreen(),

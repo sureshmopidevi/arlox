@@ -1,0 +1,39 @@
+# API contracts
+
+Shared API documentation for **[[.DisplayName]]**. Web and app stacks read contracts here before implementing UI.
+
+## Conventions
+
+- **Base URL:** `[[.APIURL]]` (backend `SERVER_PORT` default 8080)
+- **Envelope:** success responses use `{ "data": T }` — clients unwrap `data`
+- **Errors:** `{ "error": "message" }` with HTTP 4xx/5xx
+- **Auth:** `Authorization: Bearer <token>` when Auth column is `yes`
+
+## Adding a feature contract
+
+Before implementing a cross-stack feature, add `contracts/<feature>.md`:
+
+```markdown
+# <feature> — API contract
+
+## Endpoints
+| Method | Path | Auth | Request | Response |
+|--------|------|------|---------|----------|
+| GET | /api/v1/example | yes | — | `{ data: { ... } }` |
+
+## Errors
+| Status | When |
+|--------|------|
+| 401 | missing/invalid token |
+
+## Notes for web/app
+- Field names and types must match this doc
+```
+
+Then follow `.cursor/skills/add-feature-fullstack`: backend → web → app.
+
+## Existing contracts
+
+| File | Description |
+|------|-------------|
+| [auth.md](auth.md) | Login and current user |

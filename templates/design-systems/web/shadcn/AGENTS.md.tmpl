@@ -2,7 +2,9 @@
 
 ## Project
 
-**[[.DisplayName]]** admin console. Vite 6 + React 19 + TypeScript + Tailwind 3.
+**[[.DisplayName]]** admin console. Vite 6 + React 19 + TypeScript.
+
+**Design system:** [[.WebDesignSystemLabel]] (see `.arlox/design-system.json` and `components.json`).
 
 Backend API: `[[.APIURL]]` (override via `VITE_API_URL`).
 
@@ -10,7 +12,7 @@ Backend API: `[[.APIURL]]` (override via `VITE_API_URL`).
 
 1. Read `.cursor/rules/karpathy.mdc` — think first, simplify, surgical changes.
 2. Read `.cursor/rules/architecture.mdc` — feature structure, API patterns.
-3. Read `.cursor/rules/tailwind.mdc` — Tailwind only, no extra UI kits.
+3. Read `.cursor/rules/design-system.mdc` — shadcn/ui conventions.
 
 ## Adding a feature
 
@@ -20,10 +22,8 @@ Always run `npm run build` to verify before finishing.
 ## Key conventions
 
 - API calls go through `src/api/client.ts` (axios, auto-unwraps `{data}` envelope).
-- Auth state in `useAuthStore` (Zustand persist). Home (`/`) is public by default.
-- Wrap routes in `<ProtectedRoute />` when a feature requires sign-in.
-- Pages (`src/pages/`) are thin wrappers; logic lives in `src/features/`.
-- Tailwind utility classes only. No custom CSS beyond `src/index.css` directives.
+- UI: shadcn components in `src/components/ui/` — run `npx shadcn@latest add` for new primitives.
+- Auth state in `useAuthStore`. Home (`/`) is public by default.
 
 ## Verification
 

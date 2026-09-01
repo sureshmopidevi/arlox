@@ -1,0 +1,51 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:[[.Package]]/core/di/providers.dart';
+import 'package:[[.Package]]/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:[[.Package]]/features/auth/data/models/auth_dto.dart';
+import 'package:[[.Package]]/features/auth/data/repositories/auth_repository_impl.dart';
+
+final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
+  final client = ref.watch(dioClientProvider);
+  return AuthRemoteDataSource(client: client);
+});
+
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return AuthRepository(
+    remote: ref.watch(authRemoteDataSourceProvider),
+    storage: ref.watch(secureStorageProvider),
+  );
+});
+
+final authProvider = AsyncNotifierProvider<AuthNotifier, AuthUserDto?>(AuthNotifier.new);
+
+class AuthNotifier extends AsyncNotifier<AuthUserDto?> {
+  @override
+  Future<AuthUserDto?> build() {
+    return ref.read(authRepositoryProvider).restoreSession();
+  }
+
+  Future<void> login(String email, String password) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return ref.read(authRepositoryProvider).login(email, password);
+    });
+  }
+
+  Future<void> logout() async {
+    await ref.read(authRepositoryProvider).logout();
+    state = const AsyncData(null);
+  }
+}
+
+/// Notifies [GoRouter] when auth state changes.
+final routerRefreshProvider = Provider<RouterRefresh>((ref) {
+  final refresh = RouterRefresh();
+  ref.listen(authProvider, (_, __) => refresh.refresh());
+  ref.onDispose(refresh.dispose);
+  return refresh;
+});
+
+class RouterRefresh extends ChangeNotifier {
+  void refresh() => notifyListeners();
+}

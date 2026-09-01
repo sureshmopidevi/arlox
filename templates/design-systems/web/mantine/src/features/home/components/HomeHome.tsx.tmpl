@@ -1,0 +1,24 @@
+import { Card, Text, Title } from '@mantine/core'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useAuthStore } from '@/stores/authStore'
+
+export function HomeHome() {
+  useDocumentTitle('[[.DisplayName]]')
+  const user = useAuthStore((s) => s.user)
+
+  return (
+    <div>
+      <Title order={2}>Welcome to [[.DisplayName]]</Title>
+      {user && (
+        <Text c="dimmed" size="sm" mt={4}>
+          Signed in as {user.email}
+        </Text>
+      )}
+      <Card withBorder mt="lg" maw={480}>
+        <Text size="sm" c="dimmed">
+          Your admin console is ready. Add features using the add-feature skill.
+        </Text>
+      </Card>
+    </div>
+  )
+}

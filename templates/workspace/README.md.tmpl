@@ -62,6 +62,10 @@ make backend.setup
 
 Host port is assigned from your project name (see `docker-compose.yml` and `backend/configs/local/app.env` — typically 5433–7432). Each workspace gets its own port so multiple projects can run Postgres at once.
 
+## API contracts
+
+Cross-stack API docs live in **`contracts/`** — start there for auth and new features. See [contracts/README.md](contracts/README.md).
+
 ## Full-stack features
 
 Use `.cursor/skills/add-feature-fullstack` so agents implement **backend → web → app** sequentially (never in parallel for the same feature).

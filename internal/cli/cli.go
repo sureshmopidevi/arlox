@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
+	"github.com/sureshmopidevi/arlox/internal/designsystems"
 	"github.com/sureshmopidevi/arlox/internal/generate"
 	"github.com/sureshmopidevi/arlox/internal/ui"
 	"github.com/sureshmopidevi/arlox/internal/version"
@@ -46,6 +47,7 @@ func buildRoot() *cobra.Command {
 	}
 	root.SetVersionTemplate("arlox {{.Version}}\n")
 	root.AddCommand(create)
+	root.AddCommand(initCmd())
 	root.AddCommand(addCmd())
 	root.AddCommand(skillsCmd())
 	root.AddCommand(repairCmd())
@@ -75,6 +77,7 @@ type stackFlags struct {
 	module  string
 	org     string
 	out     string
+	webUI   string
 }
 
 func bindStackFlags(cmd *cobra.Command, f *stackFlags) {
@@ -90,6 +93,7 @@ func bindAddFlags(cmd *cobra.Command, f *stackFlags) {
 	cmd.Flags().BoolVar(&f.web, "web", false, "include web (React/TS) stack")
 	cmd.Flags().BoolVar(&f.app, "app", false, "include app (Flutter) stack")
 	cmd.Flags().BoolVar(&f.open, "open", false, "open workspace in Cursor, VS Code, or Antigravity IDE after creation")
+	cmd.Flags().StringVar(&f.webUI, "web-ui", "", "web design system: "+designsystems.WebIDs())
 }
 
 func selectedStacks(f stackFlags) []workspace.Stack {
@@ -113,15 +117,21 @@ func buildData(name string, f stackFlags) generate.Data {
 	}
 	// Flutter package names must be snake_case (no hyphens); match project name like web's package.json.
 	pkg := strings.ReplaceAll(name, "-", "_")
+	ds := f.webUI
+	if ds == "" {
+		ds = designsystems.DefaultWebID
+	}
 	return generate.Data{
-		Name:         name,
-		DisplayName:  toDisplayName(name),
-		Module:       module,
-		Package:      pkg,
-		Org:          f.org,
-		APIURL:       "http://localhost:8080/api/v1",
-		ArloxVersion: version.Version,
-		PostgresPort: generate.PostgresPortFromName(name),
+		Name:                 name,
+		DisplayName:          toDisplayName(name),
+		Module:               module,
+		Package:              pkg,
+		Org:                  f.org,
+		APIURL:               "http://localhost:8080/api/v1",
+		ArloxVersion:         version.Version,
+		PostgresPort:         generate.PostgresPortFromName(name),
+		WebDesignSystem:      ds,
+		WebDesignSystemLabel: designsystems.WebLabel(ds),
 	}
 }
 
@@ -273,7 +283,6 @@ type generateOpts struct {
 // runGenerate is the shared orchestration for create and add: select stacks,
 // generate them, sync the workspace file, and print the summary.
 func runGenerate(root, name string, f stackFlags, opts generateOpts) error {
-	data := buildData(name, f)
 	missing := workspace.ListMissingStacks(root)
 
 	stacks := selectedStacks(f)
@@ -295,6 +304,13 @@ func runGenerate(root, name string, f stackFlags, opts generateOpts) error {
 			return nil
 		}
 	}
+
+	webUI, err := resolveWebDesignSystem(f, stacks)
+	if err != nil {
+		return err
+	}
+	f.webUI = webUI
+	data := buildData(name, f)
 
 	result := executeStacks(root, stacks, data)
 

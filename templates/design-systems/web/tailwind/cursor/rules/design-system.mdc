@@ -1,0 +1,21 @@
+---
+description: Styling conventions — Tailwind utilities only
+globs:
+  - "src/**/*.{ts,tsx,css}"
+---
+
+# Design system — Tailwind only
+
+Read `.arlox/design-system.json` — this project uses **Tailwind utility classes** with no component library.
+
+## Rules
+
+- Use **Tailwind utility classes** exclusively for styling.
+- No second UI component library (no MUI, shadcn, Chakra, etc.).
+- The only CSS file is `src/index.css` (Tailwind directives).
+- Use `src/lib/cn.ts` to conditionally join class strings.
+
+## Component style
+
+- Prefer readable inline classes over extracted abstractions.
+- Extract a helper only when the same combination repeats 3+ times across files.

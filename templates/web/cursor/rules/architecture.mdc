@@ -38,7 +38,7 @@ No business logic, no API calls, no state in pages.
 
 ## Styling
 
-- Tailwind utility classes only. See `tailwind.mdc`.
+- Read `.cursor/rules/design-system.mdc` — must match `.arlox/design-system.json`.
 
 ## Router
 

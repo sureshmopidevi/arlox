@@ -1,0 +1,27 @@
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { Card, CardContent } from '@/components/ui/card'
+import { useAuthStore } from '@/stores/authStore'
+
+export function HomeHome() {
+  useDocumentTitle('[[.DisplayName]]')
+  const user = useAuthStore((s) => s.user)
+
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight">Welcome to [[.DisplayName]]</h1>
+      {user && (
+        <p className="mt-1 text-sm text-muted-foreground">
+          Signed in as <span className="font-medium text-foreground">{user.email}</span>
+        </p>
+      )}
+      <Card className="mt-6 inline-block">
+        <CardContent className="pt-6">
+          <p className="text-sm text-muted-foreground">
+            Your admin console is ready. Add features using the{' '}
+            <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">add-feature</code> skill.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

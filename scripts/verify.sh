@@ -54,7 +54,7 @@ cd "${WORKDIR}"
 
 echo ""
 echo "== 1. create all stacks =="
-NO_COLOR=1 "${ARLOX}" create demo --backend --web --app
+NO_COLOR=1 "${ARLOX}" create demo --backend --web --app --web-ui tailwind
 
 test -f "${DEMO}/backend/go.mod" || { echo "fail: backend missing"; exit 1; }
 test -f "${DEMO}/backend/go.sum" || { echo "fail: backend go.sum missing"; exit 1; }
@@ -85,6 +85,8 @@ grep -q '"name": "demo"' "${DEMO}/web/package.json" || { echo "fail: web package
 grep -q '^name: demo$' "${DEMO}/app/pubspec.yaml" || { echo "fail: app package name"; exit 1; }
 grep -q 'APP_NAME=Demo' "${DEMO}/backend/configs/local/app.env.example" || { echo "fail: backend APP_NAME"; exit 1; }
 test -f "${DEMO}/backend/configs/local/app.env" || { echo "fail: backend app.env missing"; exit 1; }
+test -f "${DEMO}/web/.arlox/design-system.json" || { echo "fail: web design-system manifest missing"; exit 1; }
+grep -q '"id": "tailwind"' "${DEMO}/web/.arlox/design-system.json" || { echo "fail: web design system id"; exit 1; }
 test -f "${DEMO}/web/.env" || { echo "fail: web .env missing"; exit 1; }
 test -f "${DEMO}/app/.dart_tool/package_config.json" || { echo "fail: app pub get missing"; exit 1; }
 test -f "${DEMO}/Makefile" || { echo "fail: root Makefile missing"; exit 1; }
@@ -94,7 +96,8 @@ grep -q "\"${DB_PORT}:5432\"" "${DEMO}/docker-compose.yml" || {
   echo "fail: docker-compose port mismatch — want ${DB_PORT}:5432"
   exit 1
 }
-test -f "${DEMO}/.cursor/skills/add-feature-fullstack/SKILL.md" || { echo "fail: fullstack skill missing"; exit 1; }
+test -f "${DEMO}/contracts/auth.md" || { echo "fail: contracts/auth.md missing"; exit 1; }
+test -f "${DEMO}/contracts/README.md" || { echo "fail: contracts/README.md missing"; exit 1; }
 test -f "${DEMO}/.cursor/rules/versioning.mdc" || { echo "fail: versioning rule missing"; exit 1; }
 echo "ok"
 
@@ -120,7 +123,7 @@ echo "ok"
 
 echo ""
 echo "== 2. no duplicates =="
-OUT="$(NO_COLOR=1 "${ARLOX}" create demo --backend --web --app 2>&1)"
+OUT="$(NO_COLOR=1 "${ARLOX}" create demo --backend --web --app --web-ui tailwind 2>&1)"
 echo "${OUT}" | grep -q "skipped (already exists)" || { echo "fail: expected skip"; echo "${OUT}"; exit 1; }
 echo "ok"
 
@@ -134,7 +137,7 @@ data = json.loads(ws.read_text())
 data["folders"] = [f for f in data["folders"] if f["path"] != "web"]
 ws.write_text(json.dumps(data, indent=2) + "\n")
 PY
-NO_COLOR=1 "${ARLOX}" create demo --backend --web --app >/dev/null
+NO_COLOR=1 "${ARLOX}" create demo --backend --web --app --web-ui tailwind >/dev/null
 python3 - <<PY
 import json, pathlib, sys
 ws = pathlib.Path("${DEMO}/demo.code-workspace")
@@ -147,7 +150,7 @@ echo "ok"
 echo ""
 echo "== 3c. add after partial create =="
 cd "${DEMO2}"
-NO_COLOR=1 "${ARLOX}" add --web
+NO_COLOR=1 "${ARLOX}" add --web --web-ui tailwind
 test -f "${DEMO2}/web/package.json" || { echo "fail: web not added"; exit 1; }
 grep -q '"web"' "${DEMO2}/demo2.code-workspace" || { echo "fail: workspace not merged"; exit 1; }
 echo "ok"
@@ -173,6 +176,27 @@ npm test
 echo "ok"
 
 echo ""
+echo "== 5c. web shadcn scaffold =="
+DS_SHADCN="${WORKDIR}/ds-shadcn"
+NO_COLOR=1 "${ARLOX}" create ds-shadcn --web --web-ui shadcn --out "${WORKDIR}" >/dev/null
+test -f "${DS_SHADCN}/web/components.json" || { echo "fail: shadcn components.json missing"; exit 1; }
+grep -q '"id": "shadcn"' "${DS_SHADCN}/web/.arlox/design-system.json" || { echo "fail: shadcn manifest"; exit 1; }
+cd "${DS_SHADCN}/web"
+npm install --silent
+npm run build
+echo "ok"
+
+echo ""
+echo "== 5d. web antd scaffold =="
+DS_ANTD="${WORKDIR}/ds-antd"
+NO_COLOR=1 "${ARLOX}" create ds-antd --web --web-ui antd --out "${WORKDIR}" >/dev/null
+grep -q '"id": "antd"' "${DS_ANTD}/web/.arlox/design-system.json" || { echo "fail: antd manifest"; exit 1; }
+cd "${DS_ANTD}/web"
+npm install --silent
+npm run build
+echo "ok"
+
+echo ""
 echo "== 6. flutter analyze =="
 if ! command -v flutter >/dev/null 2>&1; then
   echo "skip (flutter not on PATH)"
@@ -186,7 +210,7 @@ fi
 echo ""
 echo "== 7. guardrails =="
 test -f "${DEMO}/backend/.cursor/rules/karpathy.mdc"
-test -f "${DEMO}/web/.cursor/rules/tailwind.mdc"
+test -f "${DEMO}/web/.cursor/rules/design-system.mdc" || { echo "fail: web design-system rule missing"; exit 1; }
 test -f "${DEMO}/backend/.cursor/skills/add-feature-backend/SKILL.md" || { echo "fail: backend add-feature skill missing"; exit 1; }
 test -f "${DEMO}/web/.cursor/skills/add-feature-web/SKILL.md" || { echo "fail: web add-feature skill missing"; exit 1; }
 test -f "${DEMO}/app/.cursor/skills/add-feature-mobile/learned/README.md" || { echo "fail: app add-feature skill missing"; exit 1; }
@@ -213,6 +237,18 @@ echo "${UPGRADE_OUT}" | grep -Eq "reinstalled|upgraded" || {
   echo "${UPGRADE_OUT}"
   exit 1
 }
+echo "ok"
+
+echo ""
+echo "== 11. brownfield init =="
+BROWN="${WORKDIR}/brownfield"
+mkdir -p "${BROWN}/backend"
+printf 'module github.com/example/legacy\n\ngo 1.22\n' > "${BROWN}/backend/go.mod"
+NO_COLOR=1 "${ARLOX}" init "${BROWN}" --name brownfield >/dev/null
+test -f "${BROWN}/brownfield.code-workspace" || { echo "fail: brownfield workspace missing"; exit 1; }
+test -f "${BROWN}/Makefile" || { echo "fail: brownfield Makefile missing"; exit 1; }
+test -f "${BROWN}/contracts/auth.md" || { echo "fail: brownfield contracts missing"; exit 1; }
+grep -q '^module github.com/example/legacy$' "${BROWN}/backend/go.mod" || { echo "fail: brownfield go.mod changed"; exit 1; }
 echo "ok"
 
 echo ""

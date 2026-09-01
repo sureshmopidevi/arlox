@@ -1,0 +1,20 @@
+---
+description: Styling conventions — Ant Design
+globs:
+  - "src/**/*.{ts,tsx,css}"
+---
+
+# Design system — Ant Design
+
+Read `.arlox/design-system.json` — this project uses **Ant Design** (`antd`).
+
+## Rules
+
+- Import UI from `antd` — Button, Form, Table, Input, Card, Modal, etc.
+- Use Tailwind only for page layout (flex, spacing, width) — not for component styling.
+- Forms: use `Form`, `Form.Item`, and antd inputs — not raw HTML inputs.
+- Do not mix shadcn, MUI, or Chakra in the same project.
+
+## Docs
+
+https://ant.design/components/overview

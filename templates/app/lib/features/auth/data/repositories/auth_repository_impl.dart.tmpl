@@ -1,0 +1,34 @@
+import 'package:[[.Package]]/core/storage/secure_storage_service.dart';
+import 'package:[[.Package]]/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:[[.Package]]/features/auth/data/models/auth_dto.dart';
+
+class AuthRepository {
+  AuthRepository({
+    required AuthRemoteDataSource remote,
+    required SecureStorageService storage,
+  })  : _remote = remote,
+        _storage = storage;
+
+  final AuthRemoteDataSource _remote;
+  final SecureStorageService _storage;
+
+  Future<AuthUserDto> login(String email, String password) async {
+    final result = await _remote.login(
+      LoginCredentialsDto(email: email, password: password),
+    );
+    await _storage.saveAccessToken(result.token);
+    return result.user;
+  }
+
+  Future<AuthUserDto?> restoreSession() async {
+    final token = await _storage.getAccessToken();
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+    return _remote.me();
+  }
+
+  Future<void> logout() async {
+    await _storage.clear();
+  }
+}

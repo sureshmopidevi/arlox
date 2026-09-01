@@ -1,0 +1,28 @@
+import { Card, CardContent, Typography } from '@mui/material'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useAuthStore } from '@/stores/authStore'
+
+export function HomeHome() {
+  useDocumentTitle('[[.DisplayName]]')
+  const user = useAuthStore((s) => s.user)
+
+  return (
+    <div>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Welcome to [[.DisplayName]]
+      </Typography>
+      {user && (
+        <Typography variant="body2" color="text.secondary">
+          Signed in as {user.email}
+        </Typography>
+      )}
+      <Card sx={{ mt: 3, display: 'inline-block' }}>
+        <CardContent>
+          <Typography variant="body2">
+            Your admin console is ready. Add features using the add-feature skill.
+          </Typography>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

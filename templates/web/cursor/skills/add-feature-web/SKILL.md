@@ -21,11 +21,23 @@ Add a vertical slice to the React admin console. Keep pages thin; put logic in `
 
 ## Before coding
 
+0. **Design system** — read `.arlox/design-system.json` and `.cursor/rules/design-system.mdc`.
+   Use **only** that library for UI (do not mix antd + shadcn, etc.).
+
+| `id` | UI imports |
+|------|------------|
+| `tailwind` | Native HTML + Tailwind utility classes |
+| `shadcn` | `@/components/ui/*` — add via `npx shadcn@latest add <component>` |
+| `antd` | `antd` — Form, Table, Button, Input, … |
+| `mui` | `@mui/material` |
+| `chakra` | `@chakra-ui/react` |
+| `mantine` | `@mantine/core` |
+
 1. Read `.cursor/rules/architecture.mdc` and `.cursor/rules/karpathy.mdc` (if present).
 2. Read `.cursor/skills/add-feature-web/learned/README.md`.
 3. If backend exists, **read the API contract**:
-   - `../backend/.cursor/skills/add-feature-backend/learned/<feature>.md`
-   - Or existing backend handlers/routes
+   - `../../contracts/<feature>.md` (preferred)
+   - Or `../backend/.cursor/skills/add-feature-backend/learned/<feature>.md`
 4. Success criteria: route works, types match API, `npm run build` exits 0.
 
 If the contract is missing and backend is in this workspace, stop and implement/document backend first (or ask the user).
@@ -45,7 +57,7 @@ src/features/<name>/
 - `types.ts` — mirror backend JSON (after envelope unwrap)
 - `api/<name>Api.ts` — only via `@/api` client / shared axios instance; typed returns
 - hooks — TanStack Query `useQuery` / `useMutation`; handle errors with existing helpers
-- components — UI only; no raw axios
+- components — UI only; use the project's design system (see Phase 0); no raw axios
 
 ### 2. Thin page
 

@@ -1,0 +1,19 @@
+---
+description: Styling conventions — Material UI
+globs:
+  - "src/**/*.{ts,tsx,css}"
+---
+
+# Design system — Material UI
+
+Read `.arlox/design-system.json` — this project uses **MUI** (`@mui/material`).
+
+## Rules
+
+- Import from `@mui/material` — use `sx` prop for one-off layout tweaks.
+- Theme via `ThemeProvider` in `providers.tsx` — extend with `createTheme()` when needed.
+- Do not mix antd, shadcn, or Chakra in the same project.
+
+## Docs
+
+https://mui.com/material-ui/getting-started/

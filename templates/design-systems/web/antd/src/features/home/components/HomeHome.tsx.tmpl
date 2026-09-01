@@ -1,0 +1,24 @@
+import { Card, Typography } from 'antd'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useAuthStore } from '@/stores/authStore'
+
+export function HomeHome() {
+  useDocumentTitle('[[.DisplayName]]')
+  const user = useAuthStore((s) => s.user)
+
+  return (
+    <div>
+      <Typography.Title level={2}>Welcome to [[.DisplayName]]</Typography.Title>
+      {user && (
+        <Typography.Text type="secondary">
+          Signed in as {user.email}
+        </Typography.Text>
+      )}
+      <Card className="mt-6 inline-block">
+        <Typography.Paragraph>
+          Your admin console is ready. Add features using the add-feature skill.
+        </Typography.Paragraph>
+      </Card>
+    </div>
+  )
+}

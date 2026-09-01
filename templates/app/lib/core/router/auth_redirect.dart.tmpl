@@ -1,0 +1,21 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:[[.Package]]/features/auth/presentation/providers/auth_providers.dart';
+
+/// Redirect unauthenticated users to `/login`; send authenticated users away from login.
+String? authRedirect(Ref ref, String location) {
+  final auth = ref.read(authProvider);
+  if (auth.isLoading) {
+    return null;
+  }
+
+  final isAuthenticated = auth.valueOrNull != null;
+  final onLogin = location == '/login';
+
+  if (!isAuthenticated && !onLogin) {
+    return '/login';
+  }
+  if (isAuthenticated && onLogin) {
+    return '/';
+  }
+  return null;
+}

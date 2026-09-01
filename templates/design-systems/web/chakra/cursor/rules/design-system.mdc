@@ -1,0 +1,19 @@
+---
+description: Styling conventions — Chakra UI
+globs:
+  - "src/**/*.{ts,tsx,css}"
+---
+
+# Design system — Chakra UI
+
+Read `.arlox/design-system.json` — this project uses **Chakra UI** v2.
+
+## Rules
+
+- Import from `@chakra-ui/react` — Box, Stack, Button, Input, FormControl, etc.
+- Use Chakra props (`colorScheme`, `spacing`, `size`) — not raw Tailwind on components.
+- Do not mix antd, MUI, or shadcn in the same project.
+
+## Docs
+
+https://v2.chakra-ui.com/docs/components

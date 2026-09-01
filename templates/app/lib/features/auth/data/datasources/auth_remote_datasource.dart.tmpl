@@ -1,0 +1,44 @@
+import 'package:dio/dio.dart';
+import 'package:[[.Package]]/core/errors/api_exception.dart';
+import 'package:[[.Package]]/core/network/dio_client.dart';
+import 'package:[[.Package]]/features/auth/data/models/auth_dto.dart';
+
+class AuthRemoteDataSource {
+  AuthRemoteDataSource({required DioClient client}) : _dio = client.dio;
+
+  final Dio _dio;
+
+  Future<AuthResponseDto> login(LoginCredentialsDto credentials) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/login',
+        data: credentials.toJson(),
+      );
+      final payload = _unwrapData(response.data);
+      return AuthResponseDto.fromJson(payload);
+    } catch (e) {
+      throw DioClient.mapError(e);
+    }
+  }
+
+  Future<AuthUserDto> me() async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>('/auth/me');
+      final payload = _unwrapData(response.data);
+      return AuthUserDto.fromJson(payload);
+    } catch (e) {
+      throw DioClient.mapError(e);
+    }
+  }
+
+  Map<String, dynamic> _unwrapData(Map<String, dynamic>? json) {
+    if (json == null) {
+      throw ApiException(message: 'Empty response');
+    }
+    final data = json['data'];
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+    return json;
+  }
+}

@@ -1,0 +1,35 @@
+# [[.DisplayName]] — Agent Guide
+
+## Project
+
+**[[.DisplayName]]** admin console. Vite 6 + React 19 + TypeScript.
+
+**Design system:** [[.WebDesignSystemLabel]] (see `.arlox/design-system.json`).
+
+Backend API: `[[.APIURL]]` (override via `VITE_API_URL`).
+
+## Before making changes
+
+1. Read `.cursor/rules/karpathy.mdc` — think first, simplify, surgical changes.
+2. Read `.cursor/rules/architecture.mdc` — feature structure, API patterns.
+3. Read `.cursor/rules/design-system.mdc` — styling rules for this project's UI library.
+
+## Adding a feature
+
+Follow `.cursor/skills/add-feature-web/SKILL.md` step-by-step.
+Always run `npm run build` to verify before finishing.
+
+## Key conventions
+
+- API calls go through `src/api/client.ts` (axios, auto-unwraps `{data}` envelope).
+- Auth state in `useAuthStore` (Zustand persist). Home (`/`) is public by default.
+- Wrap routes in `<ProtectedRoute />` when a feature requires sign-in.
+- Pages (`src/pages/`) are thin wrappers; logic lives in `src/features/`.
+- Use only components from the project's design system — see `design-system.mdc`.
+
+## Verification
+
+```bash
+npm run build   # must pass before any PR
+npm run dev     # local dev on http://localhost:5173
+```
