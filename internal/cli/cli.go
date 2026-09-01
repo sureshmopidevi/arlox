@@ -121,6 +121,7 @@ func buildData(name string, f stackFlags) generate.Data {
 		Org:          f.org,
 		APIURL:       "http://localhost:8080/api/v1",
 		ArloxVersion: version.Version,
+		PostgresPort: generate.PostgresPortFromName(name),
 	}
 }
 

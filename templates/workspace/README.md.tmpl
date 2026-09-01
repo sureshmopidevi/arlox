@@ -53,6 +53,15 @@ Only folders that exist were generated. Add more later:
 arlox add
 ```
 
+## Database (Postgres)
+
+```bash
+make db-up          # Docker Postgres (project-specific host port)
+make backend.setup
+```
+
+Host port is assigned from your project name (see `docker-compose.yml` and `backend/configs/local/app.env` — typically 5433–7432). Each workspace gets its own port so multiple projects can run Postgres at once.
+
 ## Full-stack features
 
 Use `.cursor/skills/add-feature-fullstack` so agents implement **backend → web → app** sequentially (never in parallel for the same feature).

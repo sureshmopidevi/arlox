@@ -27,6 +27,7 @@ type Data struct {
 	Org          string
 	APIURL       string
 	ArloxVersion string
+	PostgresPort int
 }
 
 // HasTool reports whether name is available on PATH.

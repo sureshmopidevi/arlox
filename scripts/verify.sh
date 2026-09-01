@@ -89,6 +89,11 @@ test -f "${DEMO}/web/.env" || { echo "fail: web .env missing"; exit 1; }
 test -f "${DEMO}/app/.dart_tool/package_config.json" || { echo "fail: app pub get missing"; exit 1; }
 test -f "${DEMO}/Makefile" || { echo "fail: root Makefile missing"; exit 1; }
 test -f "${DEMO}/docker-compose.yml" || { echo "fail: docker-compose.yml missing"; exit 1; }
+DB_PORT="$(grep '^DB_PORT=' "${DEMO}/backend/configs/local/app.env.example" | cut -d= -f2 | tr -d '[:space:]')"
+grep -q "\"${DB_PORT}:5432\"" "${DEMO}/docker-compose.yml" || {
+  echo "fail: docker-compose port mismatch — want ${DB_PORT}:5432"
+  exit 1
+}
 test -f "${DEMO}/.cursor/skills/add-feature-fullstack/SKILL.md" || { echo "fail: fullstack skill missing"; exit 1; }
 test -f "${DEMO}/.cursor/rules/versioning.mdc" || { echo "fail: versioning rule missing"; exit 1; }
 echo "ok"
@@ -101,6 +106,15 @@ STATUS="$(NO_COLOR=1 make status)"
 echo "${STATUS}" | grep -q "backend  yes"
 echo "${STATUS}" | grep -q "web      no"
 echo "${STATUS}" | grep -q "app      no"
+DEMO2_PORT="$(grep '^DB_PORT=' "${DEMO2}/backend/configs/local/app.env.example" | cut -d= -f2 | tr -d '[:space:]')"
+if [ "${DEMO2_PORT}" = "${DB_PORT}" ]; then
+  echo "fail: demo and demo2 must use different postgres host ports (both ${DB_PORT})"
+  exit 1
+fi
+grep -q "\"${DEMO2_PORT}:5432\"" "${DEMO2}/docker-compose.yml" || {
+  echo "fail: demo2 docker-compose port mismatch — want ${DEMO2_PORT}:5432"
+  exit 1
+}
 cd "${WORKDIR}"
 echo "ok"
 

@@ -133,7 +133,7 @@ From the project root:
 
 ```bash
 cd myapp
-make db-up          # starts Postgres via docker-compose (host port 5433)
+make db-up          # starts Postgres via docker-compose (project-specific host port)
 make backend.setup  # env file + migrations prep
 ```
 
@@ -205,7 +205,7 @@ After upgrade you will see step-by-step success lines (`build complete`, `instal
 ```text
 myapp/
   myapp.code-workspace      # open this in your IDE
-  docker-compose.yml        # Postgres 16 (host port 5433)
+  docker-compose.yml        # Postgres 16 (host port unique per project name)
   Makefile                  # orchestrates all stacks
   README.md
   .cursor/                  # fullstack skill + rules
@@ -246,16 +246,16 @@ arlox add --web
 
 ## Database (Postgres)
 
-Generated projects include **`docker-compose.yml`** with Postgres 16 on **host port 5433** (avoids clashing with a local Postgres on 5432).
+Generated projects include **`docker-compose.yml`** with Postgres 16. The **host port is derived from your project name** (range 5433–7432), so `demo` and `demo2` never fight for the same port. It is written to both `docker-compose.yml` and `backend/configs/local/app.env`.
 
-Backend config (`backend/configs/local/app.env`):
+Example (your port will differ by project name):
 
 ```text
 DB_HOST=localhost
-DB_PORT=5433
+DB_PORT=6127
 DB_USER=postgres
 DB_PASSWORD=postgres
-DB_NAME=<project-name>
+DB_NAME=myapp
 ```
 
 Without Docker, the backend Makefile falls back to Homebrew Postgres + `createdb` on macOS.
@@ -306,7 +306,7 @@ make verify    # full smoke test in a temp dir (create, build, test, repair, upg
 make doctor    # local toolchain check
 ```
 
-Release version: [`internal/version/VERSION`](internal/version/VERSION) (currently **0.10.0**). Bump on every CLI or template change — see [`.cursor/rules/versioning.mdc`](.cursor/rules/versioning.mdc) and [`AGENTS.md`](AGENTS.md).
+Release version: [`internal/version/VERSION`](internal/version/VERSION) (currently **0.11.0**). Bump on every CLI or template change — see [`.cursor/rules/versioning.mdc`](.cursor/rules/versioning.mdc) and [`AGENTS.md`](AGENTS.md).
 
 Manual verification checklist: [`scripts/verify.md`](scripts/verify.md).
 
