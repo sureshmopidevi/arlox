@@ -113,6 +113,14 @@ func runInit(cwd, pathArg, nameFlag string, force, installDeps bool, f stackFlag
 		installInitDeps(root, stacks)
 	}
 
+	present := make([]workspace.Stack, len(stacks))
+	for i, s := range stacks {
+		present[i] = workspace.Stack(s)
+	}
+	if err := generate.WriteProjectManifest(root, data, present); err != nil {
+		ui.Warn("failed to write .arlox/project.json: " + err.Error())
+	}
+
 	ui.Summary(ui.SummaryOpts{
 		Action:     "initialized",
 		Name:       name,

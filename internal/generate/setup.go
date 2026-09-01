@@ -5,7 +5,7 @@ import (
 	"os"
 	osexec "os/exec"
 	"path/filepath"
-	"strings"
+	"github.com/sureshmopidevi/arlox/internal/naming"
 
 	arloxexec "github.com/sureshmopidevi/arlox/internal/exec"
 	"github.com/sureshmopidevi/arlox/internal/ui"
@@ -87,10 +87,10 @@ func tryPostgresSetup(stackDir, projectName string) {
 	}
 	_ = osexec.Command("brew", "services", "start", "postgresql@16").Run()
 	_ = osexec.Command("brew", "services", "start", "postgresql").Run()
-	dbName := dbNameFromProject(projectName)
+	dbName := naming.Snake(projectName)
 	_ = osexec.Command("createdb", dbName).Run()
 }
 
 func dbNameFromProject(name string) string {
-	return strings.ReplaceAll(name, "-", "_")
+	return naming.Snake(name)
 }

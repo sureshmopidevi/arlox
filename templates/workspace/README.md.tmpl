@@ -66,9 +66,23 @@ Host port is assigned from your project name (see `docker-compose.yml` and `back
 
 Cross-stack API docs live in **`contracts/`** — start there for auth and new features. See [contracts/README.md](contracts/README.md).
 
+## Project manifest
+
+Stack-aware naming lives in **`.arlox/project.json`** (`kebab`, `snake`, per-stack package/module names). Agents should read it before adding routes, modules, or DB objects.
+
 ## Full-stack features
 
 Use `.cursor/skills/add-feature-fullstack` so agents implement **backend → web → app** sequentially (never in parallel for the same feature).
+
+## Agent learning loop
+
+After each feature, stack skills require running **`learn/SKILL.md`** and appending to `learned/README.md`.
+
+Periodically:
+
+1. **`arlox skills status`** — lists unapplied learnings per stack
+2. **`.cursor/skills/reflect-and-improve`** — run `apply-pending` per stack; promote proven patterns to rules/skills
+3. **`arlox skills update`** — refreshes skills from templates; never deletes `learned/`
 
 ## Agent guardrails
 

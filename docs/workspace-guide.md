@@ -12,6 +12,7 @@ myapp/
   Makefile                 # make dev, make test, make status, …
   docker-compose.yml       # Postgres 16 (unique host port per project name)
   contracts/               # Shared API docs for cross-stack features
+  .arlox/project.json      # Stack-aware naming manifest for agents
   README.md
   .cursor/                 # Fullstack skill + workspace rules
 
@@ -58,6 +59,36 @@ Use `.cursor/skills/add-feature-fullstack`:
 4. **App** — Flutter feature slice, `flutter analyze`
 
 Never parallelize the same feature across stacks.
+
+---
+
+## Stack-aware naming (`.arlox/project.json`)
+
+User workspace names may contain `-` and `_`. arlox derives per-stack names:
+
+| Field | Used for |
+|-------|----------|
+| `kebab` | npm `package.json`, Go module segment |
+| `snake` | Flutter pubspec, Postgres `DB_NAME` |
+| `name` | Workspace folder (as entered) |
+
+Example: `my-cool_app` → kebab `my-cool-app`, snake `my_cool_app`.
+
+Agents read `.arlox/project.json` before naming new modules, routes, or tables.
+
+---
+
+## Agent learning loop
+
+After each feature, stack skills require **`learn/SKILL.md`** → append `learned/README.md`.
+
+| Step | Command / skill |
+|------|-----------------|
+| See pending learnings | `arlox skills status` |
+| Promote patterns | workspace `reflect-and-improve` or stack `apply-pending` |
+| Refresh skills after upgrade | `arlox skills update` (preserves `learned/`) |
+
+Promote only proven patterns to `.cursor/rules/*.mdc` or skill steps. Mark applied entries with `**Applied:** YYYY-MM-DD`.
 
 ---
 
@@ -125,6 +156,7 @@ From project root:
 |-----------|---------|
 | Missing Makefile, `.env`, cursor files | `arlox repair` |
 | Refresh skills after arlox upgrade | `arlox skills update` |
+| List unapplied learnings | `arlox skills status` |
 | Overwrite locally edited skills | `arlox repair --force` or `arlox skills update --force` |
 | See scaffold drift vs template | `arlox repair` (drift section) |
 
@@ -140,5 +172,6 @@ Each stack stores `.origin-manifest.json` from create time for drift detection.
 | Styling (web) | `web/.cursor/rules/design-system.mdc` |
 | Feature skills | `add-feature-backend`, `add-feature-web`, `add-feature-mobile` |
 | Full stack | `.cursor/skills/add-feature-fullstack` at workspace root |
+| Learning maintenance | `.cursor/skills/reflect-and-improve` at workspace root |
 
 Web agents must read [Web design systems](web-design-systems.md) before building UI.

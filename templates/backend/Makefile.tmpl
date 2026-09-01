@@ -1,7 +1,7 @@
 APP     := [[.Name]]
 BIN     := bin/$(APP)
 PKG     := [[.Module]]/cmd/server
-DB_NAME := $(subst -,_,[[.Name]])
+DB_NAME := [[.DBName]]
 
 .PHONY: setup run build test lint tidy doctor db-up db-create env
 

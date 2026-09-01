@@ -31,6 +31,10 @@ type Data struct {
 	PostgresPort          int
 	WebDesignSystem       string
 	WebDesignSystemLabel  string
+	KebabName             string
+	SnakeName             string
+	WebPackageName        string
+	DBName                string
 }
 
 // HasTool reports whether name is available on PATH.
@@ -85,7 +89,7 @@ func Stack(root string, stack workspace.Stack, data Data) (string, error) {
 		ui.Dim("app: running flutter create…")
 		if err := arloxexec.RunInDir(stackDir, "flutter", "create",
 			"--org", data.Org,
-			"--project-name", data.Package,
+			"--project-name", data.SnakeName,
 			"."); err != nil {
 			return "", cleanup(fmt.Errorf("flutter create: %w", err))
 		}

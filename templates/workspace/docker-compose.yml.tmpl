@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: [[.Name]]
+      POSTGRES_DB: [[.DBName]]
     volumes:
       - pgdata:/var/lib/postgresql/data
 

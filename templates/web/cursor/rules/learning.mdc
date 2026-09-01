@@ -1,30 +1,27 @@
 ---
-description: Learning and knowledge capture system
+description: Learning and knowledge capture — contracts-first, learn mandatory
 ---
 
 # Learning
 
+## Project manifest
+
+Read **`.arlox/project.json`** at the workspace root for npm package naming and stack conventions.
+
 ## After adding a feature
 
-Run `.cursor/skills/learn/SKILL.md` to capture what was learned.
-Append an entry to `.cursor/skills/add-feature-web/learned/README.md`.
+1. Pass `npm run build`.
+2. Consume API contracts from **`contracts/<feature>.md`** (workspace root).
+3. Run **`.cursor/skills/learn/SKILL.md`** (mandatory) and append to **`learned/README.md`**.
 
 ## Gated learning
 
-- Modifying core files (`src/api/`, `src/stores/`, `src/app/`, `src/layouts/`) requires
-  checking `learned/README.md` for prior lessons first.
-- If a lesson covers the area you're changing, apply it or explicitly note why not.
+- Modifying core files (`src/api/`, `src/stores/`, `src/app/`, `src/layouts/`) requires checking `learned/README.md` first.
+- UI work requires **`web/.arlox/design-system.json`** and `design-system.mdc`.
 
 ## Learned index
 
 `.cursor/skills/add-feature-web/learned/README.md` is the index.
-Format per entry:
 
-```
-## YYYY-MM-DD — <Feature Name>
-
-**Pattern:** <one-line description>
-**Files touched:** list
-**Key decisions:** bullet list
-**Pitfalls:** bullet list
-```
+Mark promoted patterns with `**Applied:** YYYY-MM-DD — <what changed>`.  
+Check pending entries with `arlox skills status`.

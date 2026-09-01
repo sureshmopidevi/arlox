@@ -1,15 +1,21 @@
 ---
-description: Knowledge persistence rules — when and how to record learnings
+description: Knowledge persistence — contracts-first, learn mandatory
 alwaysApply: false
 ---
 
 # Learning Rules
 
-## Auto-Append Trigger
+## Project manifest
 
-After completing any feature or significant fix, append a concise entry to the relevant `learned/README.md`.
+Read **`.arlox/project.json`** at the workspace root for Flutter package name (`stacks.app.package`) and org.
 
-## Entry Format
+## After adding a feature
+
+1. Pass `flutter analyze`.
+2. Consume API contracts from **`contracts/<feature>.md`** (workspace root).
+3. Run **`.cursor/skills/learn/SKILL.md`** (mandatory) and append to **`learned/README.md`**.
+
+## Entry format
 
 ```markdown
 ## YYYY-MM-DD — <short title>
@@ -18,19 +24,13 @@ After completing any feature or significant fix, append a concise entry to the r
 **Gotchas**: anything non-obvious a future agent should know.
 ```
 
-## Scope
+## Gated learn for `core/`
 
-| Work type | Append to |
-|-----------|-----------|
-| New feature | `.cursor/skills/add-feature-mobile/learned/README.md` |
-| Core change | `.cursor/skills/add-feature-mobile/learned/README.md` under a `### Core` sub-heading |
-| Deferred / risky change | Mark entry with `[PENDING]` — see `apply-pending` skill |
+Before modifying `lib/core/`, read `learned/README.md`. Record rationale for core changes.
 
-## Gated Learn for `core/`
+## Deferred learnings
 
-Before modifying anything under `lib/core/`, read `learned/README.md` for prior decisions.  
-Do not change core abstractions without recording the rationale as a new `learned/` entry.
+Mark risky deferred work with `[PENDING]` in the title. Run **`apply-pending/SKILL.md`** or workspace **`reflect-and-improve/SKILL.md`**.
 
-## Deferred Learnings
-
-If a desired change is too risky to apply immediately, record it with `[PENDING]` at the start of the entry title. The `apply-pending` skill will pick these up later.
+Mark promoted patterns with `**Applied:** YYYY-MM-DD — <what changed>`.  
+Check pending entries with `arlox skills status`.

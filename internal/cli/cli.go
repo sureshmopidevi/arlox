@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sureshmopidevi/arlox/internal/designsystems"
+	"github.com/sureshmopidevi/arlox/internal/naming"
 	"github.com/sureshmopidevi/arlox/internal/generate"
 	"github.com/sureshmopidevi/arlox/internal/ui"
 	"github.com/sureshmopidevi/arlox/internal/version"
@@ -111,38 +112,35 @@ func selectedStacks(f stackFlags) []workspace.Stack {
 }
 
 func buildData(name string, f stackFlags) generate.Data {
-	module := f.module
-	if module == "" {
-		module = "github.com/example/" + name + "-backend"
-	}
-	// Flutter package names must be snake_case (no hyphens); match project name like web's package.json.
-	pkg := strings.ReplaceAll(name, "-", "_")
+	n := naming.FromSlug(name, f.module, f.org)
 	ds := f.webUI
 	if ds == "" {
 		ds = designsystems.DefaultWebID
 	}
 	return generate.Data{
-		Name:                 name,
-		DisplayName:          toDisplayName(name),
-		Module:               module,
-		Package:              pkg,
-		Org:                  f.org,
+		Name:                 n.Name,
+		DisplayName:          n.DisplayName,
+		Module:               n.Module,
+		Package:              n.FlutterPkg,
+		Org:                  n.Org,
 		APIURL:               "http://localhost:8080/api/v1",
 		ArloxVersion:         version.Version,
 		PostgresPort:         generate.PostgresPortFromName(name),
 		WebDesignSystem:      ds,
 		WebDesignSystemLabel: designsystems.WebLabel(ds),
+		KebabName:            n.Kebab,
+		SnakeName:            n.Snake,
+		WebPackageName:       n.WebPackage,
+		DBName:               n.DBName,
 	}
 }
 
-func toDisplayName(name string) string {
-	parts := strings.Split(name, "-")
-	for i, p := range parts {
-		if len(p) > 0 {
-			parts[i] = strings.ToUpper(p[:1]) + p[1:]
-		}
-	}
-	return strings.Join(parts, "")
+func printNamingSummary(data generate.Data) {
+	ui.Dim(fmt.Sprintf("  workspace   %s", data.Name))
+	ui.Dim(fmt.Sprintf("  web npm     %s", data.WebPackageName))
+	ui.Dim(fmt.Sprintf("  flutter     %s", data.SnakeName))
+	ui.Dim(fmt.Sprintf("  postgres    %s", data.DBName))
+	fmt.Println()
 }
 
 func promptName() (string, error) {
@@ -314,6 +312,14 @@ func runGenerate(root, name string, f stackFlags, opts generateOpts) error {
 
 	result := executeStacks(root, stacks, data)
 
+	var present []workspace.Stack
+	for _, s := range workspace.ListPresentStacks(root) {
+		present = append(present, workspace.Stack(s))
+	}
+	if err := generate.WriteProjectManifest(root, data, present); err != nil {
+		ui.Warn("failed to write .arlox/project.json: " + err.Error())
+	}
+
 	wsFile := workspace.FindWorkspaceFile(root)
 	if wsFile != "" {
 		if err := workspace.SyncWorkspaceFolders(wsFile, root); err != nil {
@@ -372,6 +378,8 @@ func runCreate(args []string, f stackFlags) error {
 	}
 
 	ui.Header("create", name)
+	dataPreview := buildData(name, f)
+	printNamingSummary(dataPreview)
 	ui.WorkspaceInfo(target, filepath.Join(target, name+".code-workspace"))
 
 	wsFile := filepath.Join(target, name+".code-workspace")
@@ -482,6 +490,52 @@ func skillsCmd() *cobra.Command {
 	update.Flags().BoolVar(&force, "force", false, "overwrite locally modified skills")
 
 	cmd.AddCommand(update)
+
+	status := &cobra.Command{
+		Use:   "status",
+		Short: "List learned/README.md entries not yet marked applied",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			root, ok := workspace.DetectWorkspace(cwd)
+			if !ok {
+				ui.Error("no arlox workspace found — run from a workspace root or stack folder")
+				return fmt.Errorf("run arlox create first")
+			}
+
+			ui.Header("skills status", root)
+			summary := generate.CollectSkillsStatus(root, workspace.ListPresentStacks(root))
+			if summary.TotalEntries() == 0 {
+				ui.Dim("no learned/README.md entries found")
+				return nil
+			}
+			unapplied := summary.UnappliedEntries()
+			for _, loc := range summary.Locations {
+				pending := 0
+				for _, e := range loc.Entries {
+					if !e.Applied {
+						pending++
+					}
+				}
+				ui.Dim(fmt.Sprintf("  %s  %d entries (%d unapplied)", loc.Label, len(loc.Entries), pending))
+				for _, e := range loc.Entries {
+					if e.Applied {
+						continue
+					}
+					ui.Dim(fmt.Sprintf("    - %s", e.Title))
+				}
+			}
+			if unapplied == 0 {
+				ui.Success("all learnings applied or reviewed")
+			} else {
+				ui.Dim(fmt.Sprintf("hint: run reflect-and-improve skill or stack apply-pending (%d unapplied)", unapplied))
+			}
+			return nil
+		},
+	}
+	cmd.AddCommand(status)
 	return cmd
 }
 

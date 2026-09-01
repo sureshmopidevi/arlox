@@ -60,7 +60,7 @@ func applyDefaults(cfg *Config) {
 		}
 	}
 	if cfg.DBName == "" {
-		cfg.DBName = "[[.Name]]"
+		cfg.DBName = "[[.DBName]]"
 	}
 	if cfg.DBSSLMode == "" {
 		cfg.DBSSLMode = "disable"

@@ -99,6 +99,18 @@ grep -q "\"${DB_PORT}:5432\"" "${DEMO}/docker-compose.yml" || {
 test -f "${DEMO}/contracts/auth.md" || { echo "fail: contracts/auth.md missing"; exit 1; }
 test -f "${DEMO}/contracts/README.md" || { echo "fail: contracts/README.md missing"; exit 1; }
 test -f "${DEMO}/.cursor/rules/versioning.mdc" || { echo "fail: versioning rule missing"; exit 1; }
+test -f "${DEMO}/.arlox/project.json" || { echo "fail: project manifest missing"; exit 1; }
+echo "ok"
+
+echo ""
+echo "== 1a. stack-aware naming =="
+NAME_DEMO="${WORKDIR}/name-demo"
+NO_COLOR=1 "${ARLOX}" create name-demo --backend --web --app --web-ui tailwind --out "${WORKDIR}" >/dev/null
+grep -q '"name": "name-demo"' "${NAME_DEMO}/web/package.json" || { echo "fail: web kebab package name"; exit 1; }
+grep -q '^name: name_demo$' "${NAME_DEMO}/app/pubspec.yaml" || { echo "fail: flutter snake name"; exit 1; }
+grep -q '^DB_NAME=name_demo$' "${NAME_DEMO}/backend/configs/local/app.env.example" || { echo "fail: postgres snake db name"; exit 1; }
+grep -q 'POSTGRES_DB: name_demo' "${NAME_DEMO}/docker-compose.yml" || { echo "fail: docker postgres db name"; exit 1; }
+grep -q '"snake": "name_demo"' "${NAME_DEMO}/.arlox/project.json" || { echo "fail: project.json snake"; exit 1; }
 echo "ok"
 
 echo ""
@@ -226,6 +238,8 @@ echo ""
 echo "== 9. skills update =="
 NO_COLOR=1 "${ARLOX}" skills update >/dev/null
 test -f "${DEMO}/.cursor/skills/add-feature-fullstack/SKILL.md" || { echo "fail: skills update missing fullstack skill"; exit 1; }
+test -f "${DEMO}/.cursor/skills/reflect-and-improve/SKILL.md" || { echo "fail: reflect-and-improve skill missing"; exit 1; }
+NO_COLOR=1 "${ARLOX}" skills status >/dev/null
 echo "ok"
 
 echo ""

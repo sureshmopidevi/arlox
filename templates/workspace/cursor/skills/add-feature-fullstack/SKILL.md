@@ -1,34 +1,40 @@
 ---
 name: add-feature-fullstack
 description: >-
-  Implements a feature across backend, web, and Flutter app in strict order
-  (backend → web → app) with API contracts and verification between phases.
-  Use when the user asks to add a full-stack feature, cross-stack feature,
-  feature for backend and web, or anything spanning multiple arlox stacks.
+  Ship a feature across backend, web, and Flutter in order (contract → backend
+  → web → app) with green verify between phases. Use when the user asks for a
+  full-stack, cross-stack, or multi-stack feature spanning API and UI.
 ---
 
 # Add Feature Across Stacks
 
+## User intent
+
+When done, every **existing** stack implements the same feature: API documented in `contracts/<feature>.md`, backend tests pass, web route works, and Flutter screen is wired — with no parallel cross-stack edits.
+
+## Read first
+
+1. **`.arlox/project.json`** — naming (`kebab`, `snake`), stack presence.
+2. **`contracts/README.md`** — contract format.
+3. Per-phase stack skills: `add-feature-backend`, `add-feature-web`, `add-feature-mobile`.
+
 Run **one stack at a time**. Never parallelize backend/web/app for the same feature.
 
-## When to use
-
-- User wants a feature in more than one of: API, admin web, Flutter app
-- Phrases like: "full stack", "backend and web", "across stacks", "API + UI"
-
-**Do not use** for single-stack work — use `add-feature-backend`, `add-feature-web`, or `add-feature-mobile` instead.
-
-## Success criteria (all that apply)
+## Success criteria
 
 | Stack | Must prove |
 |-------|------------|
-| Backend | `make test` green + `contracts/<feature>.md` API contract |
-| Web | Types + API client + UI + route/nav + `npm run build` green |
-| App | Feature slice + route + `flutter analyze` green |
+| Contract | `contracts/<feature>.md` exists before backend coding |
+| Backend | `make test` green |
+| Web | Route + nav + `npm run build` green |
+| App | Feature slice + `flutter analyze` green |
+| Learn | Each stack that ran must append via its `learn/SKILL.md` |
 
 If `web/` exists, **Phase 2 (web) is mandatory** — do not stop after backend.
 
-## 0. Detect stacks
+## Steps
+
+### 0. Detect stacks
 
 ```text
 backend/  → Phase 1
@@ -36,100 +42,56 @@ web/      → Phase 2   ← required when this folder exists
 app/      → Phase 3
 ```
 
-State the plan to the user before coding:
+State the plan before coding:
 
 ```text
 1. contracts → write contracts/<feature>.md
 2. backend    → verify: make test
 3. web        → verify: npm run build
 4. app        → verify: flutter analyze
+5. learn      → each stack runs learn/SKILL.md
 ```
 
-Skip only missing folders. Never skip an existing stack.
+Skip only **missing** folders. Never skip an existing stack.
 
-## 0. Phase — Contract (always, before backend)
+### Phase 0 — Contract (always first)
 
-Create or update **`contracts/<feature>.md`** at the workspace root using the format in [`contracts/README.md`](../contracts/README.md).
+Create **`contracts/<feature>.md`** using [`contracts/README.md`](../../contracts/README.md). Do **not** start backend until it exists.
 
-This is the **canonical contract** for web and app. Optionally mirror a summary in `backend/.cursor/skills/add-feature-backend/learned/<feature>.md`.
+### Phase 1 — Backend (if `backend/` exists)
 
-Do **not** start backend until `contracts/<feature>.md` exists.
+Work **only** under `backend/`. Follow `backend/.cursor/skills/add-feature-backend/SKILL.md`.  
+**Verify:** `cd backend && make test`
 
-## 1. Phase — Backend (if `backend/` exists)
+### Phase 2 — Web (if `web/` exists)
 
-Work **only** under `backend/`. Follow `backend/.cursor/skills/add-feature-backend/SKILL.md`.
+Work **only** under `web/`. Follow `web/.cursor/skills/add-feature-web/SKILL.md`.  
+Read `web/.arlox/design-system.json`.  
+**Verify:** `cd web && npm run build`
 
-Implement endpoints to match **`contracts/<feature>.md`**.
+### Phase 3 — App (if `app/` exists)
 
-**Verify:** `cd backend && make test`  
-Do **not** start web until backend tests pass.
-
-## 2. Phase — Web (if `web/` exists)
-
-Work **only** under `web/`. Follow `web/.cursor/skills/add-feature-web/SKILL.md`.
-
-**Must consume** `contracts/<feature>.md` (or ask if missing).
-
-**Design system:** read `web/.arlox/design-system.json` and follow `web/.cursor/rules/design-system.mdc` — use the same UI library as the scaffold.
-
-**Required deliverables:**
-
-1. `src/features/<name>/types.ts` — match API shapes
-2. `src/features/<name>/api/<name>Api.ts` — calls via `apiClient`
-3. Query/mutation hooks
-4. Feature UI component + thin page
-5. Route in `src/app/router.tsx`
-6. Nav item in `src/layouts/AdminSidebar.tsx` (unless user said otherwise)
-
-**Verify:** `cd web && npm run build`  
-Do **not** start app until this passes.
-
-## 3. Phase — App (if `app/` exists)
-
-Work **only** under `app/`. Follow `app/.cursor/skills/add-feature-mobile/SKILL.md`.
-
-Consume the same backend contract. Do not invent endpoints.
-
+Work **only** under `app/`. Follow `app/.cursor/skills/add-feature-mobile/SKILL.md`.  
 **Verify:** `cd app && flutter analyze`
 
-## Subagent pattern (preferred)
+### Phase 4 — Learn (mandatory)
 
-For each phase, use a Task/subagent with:
+Each stack that ran must run its **`learn/SKILL.md`** and append to `learned/README.md`.  
+If a pattern should become a reusable rule or skill step, run that stack's **`apply-pending/SKILL.md`** or workspace **`reflect-and-improve/SKILL.md`**.
 
-```text
-Scope: only <stack>/ 
-Read: backend → add-feature-backend | web → add-feature-web | app → add-feature-mobile
-Contract: contracts/<feature>.md  (web/mobile)
-Verify: <stack verify command>
-Return: files changed + verify output summary
-```
+## Verify
 
-Wait for completion + green verify before launching the next phase.
+Run each stack's verify command in order; do not start the next phase until the current one is green.
+
+## Learn
+
+Mandatory after each phase. See Phase 4 above.
 
 ## Anti-patterns
 
-- Building backend only and calling the feature "done" when `web/` exists
-- Starting backend before `contracts/<feature>.md` exists
-- Starting web/app before backend tests pass
+- Building backend only when `web/` exists
+- Starting backend before `contracts/<feature>.md`
+- Starting web/app before prior phase verify passes
 - Parallel subagents on the same feature
-- Editing multiple stacks in one agent turn
-- Drive-by refactors outside the feature
-- Hardcoding API URLs instead of using stack clients/config
-
-## Example
-
-User: "Add issues list with create form (full stack)"
-
-```text
-1. Backend: modules/issues + routes + tests (per contracts/issues.md)
-2. Web: features/issues + IssuesPage + /issues nav → npm run build
-3. App: lib/features/issues + GoRoute → flutter analyze
-```
-
-## Done checklist
-
-- [ ] Every existing stack was implemented (not skipped)
-- [ ] `contracts/<feature>.md` exists (if full-stack feature)
-- [ ] Web UI is reachable via route + nav (if web ran)
-- [ ] Each phase verify command passed
-- [ ] No cross-stack drive-by edits
+- API contracts only in `learned/` instead of `contracts/`
+- Hardcoding URLs instead of stack clients/config

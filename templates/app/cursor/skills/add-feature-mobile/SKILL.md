@@ -1,122 +1,65 @@
 ---
 name: add-feature-mobile
 description: >-
-  Scaffolds a Flutter vertical feature slice (data/domain/presentation),
-  wires GoRouter, verifies with flutter analyze, and records learnings.
-  Use when adding a mobile/app feature, new screen, or Flutter resource
-  that consumes the backend API.
+  Ship a Flutter feature slice with GoRouter route, Riverpod wiring, and API
+  calls matching contracts/<feature>.md; flutter analyze clean. Use when adding
+  a mobile screen, app feature, or Flutter resource that consumes the backend API.
 ---
 
 # Add Feature (Mobile)
 
-Scaffold a vertical feature slice under `lib/features/<name>/`.
+## User intent
 
-## When to use
+When done, the user can navigate to a new screen, see data from the backend, and the feature follows the project's clean-architecture slice under `lib/features/<name>/`.
 
-- New Flutter screen / feature
-- Mobile UI that calls the backend API
-- "Add X to the app"
+## Read first
+
+1. **`.arlox/project.json`** (workspace root) — `stacks.app.package` (snake_case pubspec name), `stacks.app.org`.
+2. **`contracts/<feature>.md`** (workspace root, preferred) or `../backend/.cursor/skills/add-feature-backend/learned/<feature>.md` as fallback.
+3. **`.cursor/rules/architecture.mdc`**.
+4. **`.cursor/skills/add-feature-mobile/learned/README.md`**.
 
 **Do not use** alone for multi-stack work — prefer workspace `add-feature-fullstack`.
 
-## Before coding
+## Success criteria
 
-1. Read `.cursor/rules/architecture.mdc`.
-2. Read `.cursor/skills/add-feature-mobile/learned/README.md`.
-3. If backend exists, read:
-   - `../../contracts/<feature>.md` (preferred)
-   - or `../backend/.cursor/skills/add-feature-backend/learned/<feature>.md`
-4. Confirm feature name if ambiguous.
-5. Success criteria: route opens, API wired, `flutter analyze` clean.
+| Check | Must be true |
+|-------|----------------|
+| Slice | `data/` → `domain/` → `presentation/` under `lib/features/<name>/` |
+| Route | `GoRoute` registered; protected routes use `authRedirect` |
+| Contract | API paths match `contracts/<feature>.md` |
+| Analyze | `flutter analyze` reports no issues |
+| Learn | Entry appended via `learn/SKILL.md` |
+
+Confirm feature name if ambiguous before scaffolding.
 
 ## Steps
 
-### 1. Scaffold
+1. **Scaffold** feature slice — datasource, DTO, repository, entity, use case, providers, screen.
+2. **Datasource** — inject `DioClient`; map errors with `DioClient.mapError`.
+3. **Repository** — domain interface returns entities; impl maps DTO → entity.
+4. **Providers** — feature-scoped Riverpod: dio → datasource → repository → use case → UI state.
+5. **Screen** — `ConsumerWidget`; handle `AsyncValue` loading/error/data.
+6. **Route** — add `GoRoute` in `lib/core/router/app_router.dart`.
+7. **Verify** — `flutter analyze`.
+8. **Learn** — run **`.cursor/skills/learn/SKILL.md`** (mandatory).
 
-```text
-lib/features/<name>/
-  data/
-    datasources/<name>_remote_datasource.dart
-    models/<name>_dto.dart
-    repositories/<name>_repository_impl.dart
-  domain/
-    entities/<name>.dart
-    repositories/<name>_repository.dart
-    usecases/get_<name>.dart    # or create_/update_/delete_
-  presentation/
-    screens/<name>_screen.dart
-    providers/<name>_providers.dart
-```
-
-### 2. Datasource
-
-- Inject `DioClient` via constructor (providers wire it — do not read providers inside datasource).
-- Map `DioException` with `DioClient.mapError` → `ApiException`.
-- Paths must match the backend contract.
-
-### 3. Repository
-
-- Domain interface returns entities (not DTOs).
-- Impl maps DTO → entity.
-
-### 4. Use case
-
-One public `call` method per use case class. No multi-purpose god use cases.
-
-### 5. Providers
-
-Feature-scoped Riverpod providers in `presentation/providers/`. Wire:
-
-`dioClient` → datasource → repository → use case → presentation state.
-
-### 6. Screen
-
-- `ConsumerWidget` / `ConsumerStatefulWidget` only.
-- Handle `AsyncValue`: loading / error (`EmptyStateView` if present) / data.
-- Material widgets only — no custom design-token systems unless the project already has one.
-- Use `AppConstants.appName` / existing constants — do not hardcode product titles unnecessarily.
-
-### 7. Route
-
-Add a `GoRoute` in `lib/core/router/app_router.dart`. Protected routes rely on `authRedirect` — unauthenticated users go to `/login`.
-
-### 8. Verify
+## Verify
 
 ```bash
 flutter analyze
 ```
 
-Fix all issues. Run `dart run custom_lint` if the project uses it.
+Run `dart run custom_lint` if the project uses it.
 
-### 9. Learn
+## Learn
 
-Append to `.cursor/skills/add-feature-mobile/learned/README.md`:
-
-```markdown
-## YYYY-MM-DD — add <name>
-**What**: scaffolded <name> (datasource, repo, use case, screen, route).
-**API**: <endpoints consumed>.
-**Gotchas**: <notes>.
-```
-
-## Constraints
-
-- Features must not import other features — shared code goes in `core/`
-- Auth: login at `/login`; use `authProvider` for session — do not bypass `AuthRepository`
-- Do not invent backend endpoints
-- Surgical diffs only
+Run **`.cursor/skills/learn/SKILL.md`** after verify passes. Append to **`learned/README.md`**.
 
 ## Anti-patterns
 
 - `StatefulWidget` + manual plumbing instead of Riverpod
 - Calling Dio directly from widgets
 - Skipping GoRouter registration
-- Parallel "also fix backend/web" edits from this skill
-
-## Done checklist
-
-- [ ] Feature slice created
-- [ ] Route registered
-- [ ] API matches backend contract
-- [ ] `flutter analyze` clean
-- [ ] Learning entry recorded
+- Inventing backend endpoints
+- Cross-feature imports (shared code belongs in `core/`)

@@ -109,6 +109,19 @@ Preserves `learned/` subfolders unless `--force`.
 
 ---
 
+## `arlox skills status`
+
+List `learned/README.md` entries not yet marked with `**Applied:**`.
+
+```bash
+cd myapp
+arlox skills status
+```
+
+Use with workspace `.cursor/skills/reflect-and-improve` or stack `apply-pending` skills to promote patterns into rules.
+
+---
+
 ## `arlox upgrade`
 
 Rebuild and reinstall arlox from source (default `~/arlox`).

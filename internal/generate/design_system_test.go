@@ -21,6 +21,10 @@ func TestWebDesignSystemOverlaysRender(t *testing.T) {
 				ArloxVersion:         "0.15.0",
 				WebDesignSystem:      sys.ID,
 				WebDesignSystemLabel: sys.Label,
+				KebabName:            "dsdemo",
+				SnakeName:            "dsdemo",
+				WebPackageName:       "dsdemo",
+				DBName:               "dsdemo",
 			}
 			webDir := filepath.Join(root, "web")
 			if err := os.MkdirAll(webDir, 0o755); err != nil {

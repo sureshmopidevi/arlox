@@ -1,47 +1,48 @@
 ---
 name: add-feature-backend
 description: >-
-  Scaffolds a new Go domain module (repository, service, handler, routes),
-  wires it into main/router, verifies with make test, and records an API
-  contract in learned/. Use when adding a backend feature, new API resource,
-  or new modules/<name> domain in this Go service.
+  Ship a new Go API resource under modules/<name> with tests green and a
+  contracts/<name>.md API contract for web/app. Use when adding a backend
+  feature, new REST resource, or modules/<name> domain in this Go service.
 ---
 
 # Add Feature (Backend)
 
-Surgical checklist for a new domain module. Touch only what this feature needs.
+## User intent
 
-## When to use
+When done, the API exposes the new resource at documented paths, `make test` passes, and **`contracts/<name>.md`** at the workspace root describes endpoints for web and Flutter agents.
 
-- New API resource / domain module under `modules/`
-- Extending the Gin API with CRUD or domain endpoints
+## Read first
+
+1. **`.arlox/project.json`** (workspace root) — `stacks.backend.module`, `stacks.backend.dbName`, naming (`kebab`, `snake`).
+2. **`contracts/README.md`** — envelope, auth header, contract format.
+3. **`contracts/<name>.md`** — create or update before coding if missing.
+4. **`.cursor/rules/architecture.mdc`** and **`.cursor/rules/karpathy.mdc`** (if present).
+5. **`.cursor/skills/add-feature-backend/learned/README.md`** — prior backend patterns (not API contracts).
 
 **Do not use** for cross-stack work — use workspace `add-feature-fullstack`.
 
-## Before coding
+## Success criteria
 
-1. Read `.cursor/rules/architecture.mdc` and `.cursor/rules/karpathy.mdc` (if present).
-2. Read `.cursor/skills/add-feature-backend/learned/` for prior patterns.
-3. State assumptions + success criteria:
-   - Endpoints to add
-   - Auth required? yes/no
-   - Verify: `make test` (+ `make lint` if available)
+| Check | Must be true |
+|-------|----------------|
+| Module wired | `repository` → `service` → `handler` → routes registered |
+| Tests | `make test` exits 0 |
+| Contract | `contracts/<name>.md` exists and matches implemented endpoints |
+| Scope | No drive-by edits outside this feature |
 
 If the feature name or scope is ambiguous, ask before scaffolding.
 
 ## Steps
 
-### 1. Scaffold module
+1. **Contract** — write or confirm `contracts/<name>.md` (workspace root). Do not invent endpoints web will need later without documenting them.
+2. **Scaffold** `modules/<name>/` — `repository/`, `service/`, `handler/`, `routes/`.
+3. **Wire DI** in `cmd/server/main.go` and register routes in `internal/server/router.go`.
+4. **Models** — add GORM models under `internal/models/` only if needed.
+5. **Verify** — `make test` (and `make lint` if available). Loop until green.
+6. **Learn** — run **`.cursor/skills/learn/SKILL.md`** (mandatory). Append to `learned/README.md`; do not put API contracts in `learned/`.
 
-```text
-modules/<name>/
-  repository/repository.go
-  service/service.go
-  handler/handler.go
-  routes/routes.go
-```
-
-Layer rules:
+### Layer rules
 
 | Layer | Allowed | Forbidden |
 |-------|---------|-----------|
@@ -50,77 +51,21 @@ Layer rules:
 | Handler | Bind → service → `response.*` | Business logic, raw `c.JSON` |
 | Routes | Register on passed group | New router frameworks |
 
-### 2. Wire DI in `cmd/server/main.go`
-
-```go
-<name>Repo := <name>Repo.New(db)
-<name>Svc  := <name>Service.New(<name>Repo /*, cfg if needed */)
-<name>H    := <name>Handler.New(<name>Svc)
-```
-
-Pass `<name>H` into `server.NewRouter(...)`.
-
-### 3. Register routes in `internal/server/router.go`
-
-```go
-<name>Routes.Register(api, <name>H)
-```
-
-Prefer `/api/v1/<resource>` paths consistent with existing modules (`auth`, `ping`).
-
-### 4. Models / migrations
-
-- Add GORM models under `internal/models/` only if needed.
-- Keep seed data minimal; only what the feature requires for local demo.
-
-### 5. Verify
+## Verify
 
 ```bash
 make test
 make lint   # if golangci-lint is installed
 ```
 
-Loop until green. Do not declare done with failing tests.
+## Learn
 
-### 6. Record API contract (required for web/app)
-
-Write `.cursor/skills/add-feature-backend/learned/<name>.md`:
-
-```markdown
-# <name> — API contract
-
-## Endpoints
-| Method | Path | Auth | Request | Response |
-|--------|------|------|---------|----------|
-| GET | /api/v1/<name> | yes | — | `{ data: [ ... ] }` |
-| POST | /api/v1/<name> | yes | `{ ... }` | `{ data: { ... } }` |
-
-## Errors
-| Status | When |
-|--------|------|
-| 400 | validation |
-| 401 | unauthorized |
-| 404 | not found |
-
-## Notes for web/app
-- Envelope `{ data: T }` — clients unwrap automatically
-- Header: `Authorization: Bearer <token>`
-```
-
-Update `learned/README.md` index with a one-line entry.
+Run **`.cursor/skills/learn/SKILL.md`** after verify passes. Record implementation patterns and gotchas in **`learned/README.md`**. API shape stays in **`contracts/<name>.md`**.
 
 ## Anti-patterns
 
-- Business logic in handlers
-- Calling GORM from handlers/services incorrectly (GORM only in repository)
-- Skipping the learned/ contract doc
+- Business logic in handlers or GORM outside repository
+- API contract only in `learned/` instead of `contracts/`
+- Skipping `contracts/<name>.md` before implementation
 - Refactoring unrelated modules
-- Adding a second ORM/router/DI framework
-
-## Done checklist
-
-- [ ] Module files created and wired
-- [ ] Routes registered
-- [ ] `make test` passes
-- [ ] `learned/<name>.md` contract written
-- [ ] No drive-by edits outside this feature
+- Ignoring `.arlox/project.json` when naming DB tables or module paths
