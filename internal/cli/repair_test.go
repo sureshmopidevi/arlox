@@ -39,7 +39,7 @@ func TestRunRepairRecreatesMissingWorkspaceAndConfigs(t *testing.T) {
 	}
 
 	// Run repair (disable deps install for fast isolated unit test)
-	if err := runRepair(root, false, false); err != nil {
+	if err := runRepair(root, false, false, false); err != nil {
 		t.Fatalf("runRepair failed: %v", err)
 	}
 

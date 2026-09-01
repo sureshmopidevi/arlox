@@ -1,51 +1,81 @@
 # arlox
 
-> **Status: Active Development 🚧**
-> `arlox` is currently in active development. APIs, CLI commands, and template architectures are evolving rapidly. Feedback, issues, and contributions are welcome!
-
-Scaffold and orchestrate modern **multi-stack workspaces** (Go backend, React/Vite web, and Flutter mobile app) with unified `.code-workspace` configurations, root `Makefile` automation, and **AI Agent guardrails** (Cursor & Antigravity rules and skills) baked in.
+Scaffold and orchestrate **multi-stack workspaces** — Go backend, React/Vite web, and Flutter app — with a unified IDE workspace, root Makefile, Docker Postgres, and AI agent guardrails built in.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.22%2B-00ADD8?logo=go)](go.mod)
+[![Go Version](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go)](go.mod)
+
+> **Active development.** CLI commands and templates evolve quickly. Feedback and contributions welcome.
 
 ---
 
-## 🎯 What is arlox intended for?
+## Table of contents
 
-Building fullstack products often requires managing separate stacks (API backend, web dashboard, and mobile client) with repetitive setup, conflicting configs, and inconsistent developer workflows. 
-
-`arlox` solves this by giving you:
-
-* **Production-ready Scaffolds:**
-  * 🐹 **Backend:** Go + Gin REST API with JWT auth, GORM/PostgreSQL migrations, health checks, and modular architecture.
-  * ⚛️ **Web:** Vite + React + TypeScript + Tailwind CSS with Zustand session state, React Query, and auth routing.
-  * 📱 **Mobile App:** Flutter app with clean navigation, Dio networking, secure storage, and Material 3 design.
-* **Unified Workspace:** Single `.code-workspace` tailored for **Cursor**, **VS Code**, and **Antigravity IDE**.
-* **One-Command Orchestration:** Root `Makefile` with `make dev` (starts backend, health-polls until ready, and launches web frontend), `make test`, `make doctor`, and `make status`.
-* **AI Agent Guardrails:** Pre-configured `.cursor/rules`, Karpathy-style engineering guidelines, `AGENTS.md`, and self-documenting `.cursor/skills` in each stack so AI coding assistants write clean, consistent code.
-* **Modular Stack Management:** Generate all stacks together or start small and incrementally add stacks later with `arlox add`.
+- [What you get](#what-you-get)
+- [Prerequisites](#prerequisites)
+- [Install arlox](#install-arlox)
+- [Quick start — your first project](#quick-start--your-first-project)
+- [CLI reference](#cli-reference)
+- [Generated project layout](#generated-project-layout)
+- [Day-to-day workflow](#day-to-day-workflow)
+- [Database (Postgres)](#database-postgres)
+- [AI agent guardrails](#ai-agent-guardrails)
+- [Maintaining arlox & workspaces](#maintaining-arlox--workspaces)
+- [Contributing & verification](#contributing--verification)
+- [License](#license)
 
 ---
 
-## Installation
+## What you get
 
-### Option 1: 1-Line Installer (Recommended — Zero Manual PATH Setup)
+| Layer | What arlox provides |
+|-------|---------------------|
+| **Backend** | Go + Gin REST API, JWT auth, GORM/PostgreSQL, health checks, modular layout |
+| **Web** | React 19 + Vite + TypeScript + Tailwind, Zustand, React Query, Vitest |
+| **App** | Flutter + Riverpod + go_router, Dio, secure storage |
+| **Workspace** | `.code-workspace` for Cursor, VS Code, Antigravity IDE |
+| **Orchestration** | Root `Makefile` — `make dev`, `make test`, `make doctor`, `make status` |
+| **AI guardrails** | `.cursor/rules`, `.cursor/skills`, Karpathy guidelines, `AGENTS.md` per stack |
 
-Installs `arlox`, automatically links it into your system `$PATH`, and persists configuration in your shell rc:
+Start with all stacks or add them later (`arlox add`). Partial workspaces work — missing stacks are skipped automatically.
+
+---
+
+## Prerequisites
+
+Install these **before** generating stacks that need them:
+
+| Tool | Required for | Check |
+|------|----------------|-------|
+| [Go](https://go.dev/dl/) 1.26+ | arlox CLI, backend stack | `go version` |
+| [Git](https://git-scm.com/) | all stacks | `git version` |
+| [Node.js](https://nodejs.org/) + npm | web stack | `node -v && npm -v` |
+| [Flutter](https://flutter.dev/) | app stack | `flutter doctor` |
+| [Docker](https://www.docker.com/) (optional) | local Postgres via Compose | `docker compose version` |
+
+Run **`arlox doctor`** anytime to see what is on your PATH and whether GOPATH/bin is configured.
+
+---
+
+## Install arlox
+
+### Option 1 — One-line installer (recommended)
+
+Installs the binary, links it into your PATH, and updates your shell rc:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sureshmopidevi/arlox/main/install.sh | bash
 ```
 
-### Option 2: Go Install (Direct compile via Go toolchain)
+### Option 2 — Go install
 
-If you already have `~/go/bin` configured in your PATH:
+Requires `~/go/bin` on your PATH:
 
 ```bash
 go install github.com/sureshmopidevi/arlox/cmd/arlox@latest
 ```
 
-### Option 3: From Source (For contributors / local development)
+### Option 3 — From source (contributors)
 
 ```bash
 git clone https://github.com/sureshmopidevi/arlox.git ~/arlox
@@ -53,79 +83,235 @@ cd ~/arlox
 ./install.sh
 ```
 
-Then create a project:
+Confirm:
+
+```bash
+arlox version
+```
+
+---
+
+## Quick start — your first project
+
+### 1. Create a workspace
+
+Interactive (pick stacks in the terminal):
 
 ```bash
 cd ~/Projects
 arlox create myapp
 ```
 
+Or specify stacks upfront:
+
+```bash
+arlox create myapp --backend --web --app
+```
+
+Useful flags:
+
+| Flag | Purpose |
+|------|---------|
+| `--module github.com/you/myapp-backend` | Go module path (default: `github.com/example/<name>-backend`) |
+| `--org com.yourcompany` | Flutter org (default: `com.example`) |
+| `--out ~/Projects` | Parent directory for the new folder |
+| `--open` | Open `.code-workspace` in Cursor, VS Code, or Antigravity after create |
+
+During create you will see **live terminal output** for `go mod tidy`, `npm install`, `flutter create`, etc.
+
+### 2. Open in your editor
+
+```bash
+cursor --classic myapp/myapp.code-workspace   # Cursor IDE
+code myapp/myapp.code-workspace               # VS Code
+agy-ide myapp/myapp.code-workspace            # Antigravity
+```
+
+### 3. Start Postgres (backend projects)
+
+From the project root:
+
+```bash
+cd myapp
+make db-up          # starts Postgres via docker-compose (host port 5433)
+make backend.setup  # env file + migrations prep
+```
+
+### 4. Run the stack
+
+```bash
+make dev            # backend (background) → health poll → web dev server
+```
+
+In another terminal, for mobile:
+
+```bash
+make app.run
+```
+
+### 5. Verify everything
+
+```bash
+make status         # which stacks exist
+make doctor         # toolchain + stack health
+make test           # backend + web (Vitest) + app tests
+```
+
 ---
 
-## Quick reference
+## CLI reference
+
+### Core commands
 
 ```bash
 arlox                         # help
 arlox version                 # print version (also: arlox -v)
-arlox doctor                  # check toolchains (go, node, npm, flutter, git) & PATH
-arlox upgrade                 # git pull + rebuild + reinstall from ~/arlox
-arlox create myapp            # interactive — pick stacks, shows path first
-arlox create myapp --backend --web --app
-cd myapp && arlox add --app   # add stacks later
-cd myapp && arlox repair      # audit & restore missing configs, rules, or deps
-arlox uninstall               # remove arlox and legacy binaries from PATH
-make verify                   # dev smoke test (temp dir only, auto-deleted)
-make help
+arlox doctor                  # toolchains, PATH, workspace detection
 ```
 
-Release version lives in [`internal/version/VERSION`](internal/version/VERSION). **Bump it on every CLI or template change** (see [`.cursor/rules/versioning.mdc`](.cursor/rules/versioning.mdc)).
-
-To update an installed binary after pulling changes:
+### Create & extend projects
 
 ```bash
-arlox upgrade
-# or: arlox upgrade --source ~/arlox
-# or: ARLOX_HOME=~/arlox arlox upgrade --no-pull
+arlox create myapp                    # interactive stack picker
+arlox create myapp --backend --web    # partial workspace
+cd myapp && arlox add --app            # add stacks later
 ```
+
+### Maintain workspaces
+
+```bash
+cd myapp && arlox repair              # restore missing configs, rules, skills, deps
+cd myapp && arlox repair --force      # overwrite locally modified skills/rules
+cd myapp && arlox skills update       # refresh .cursor templates (keeps learned/)
+```
+
+`repair` also reports **scaffold drift** — files that differ from the original arlox template (see `.origin-manifest.json` per stack).
+
+### Maintain arlox itself
+
+```bash
+arlox upgrade                         # git pull + rebuild + reinstall from ~/arlox
+arlox upgrade --source ~/arlox        # explicit source path
+arlox upgrade --no-pull               # rebuild without git pull
+arlox uninstall                       # remove binary from PATH
+```
+
+After upgrade you will see step-by-step success lines (`build complete`, `installed to …`, `reinstalled` or `upgraded X → Y`).
 
 ---
 
-## What you get
+## Generated project layout
 
 ```text
 myapp/
-  myapp.code-workspace   # open in Cursor, VS Code, or Antigravity IDE
-  .cursor/              # fullstack sequential skill
-  backend/              # Go + Gin (own git repo)
-  web/                  # React + Tailwind (own git repo)
-  app/                  # Flutter home page (own git repo)
+  myapp.code-workspace      # open this in your IDE
+  docker-compose.yml        # Postgres 16 (host port 5433)
+  Makefile                  # orchestrates all stacks
+  README.md
+  .cursor/                  # fullstack skill + rules
+
+  backend/                  # own git repo — Go + Gin + JWT + GORM
+  web/                      # own git repo — React + Vite + Tailwind + Vitest
+  app/                      # own git repo — Flutter + Riverpod
 ```
+
+Each stack includes its own `.cursor/rules`, `.cursor/skills`, and `AGENTS.md`.
 
 ---
 
-## Agent guardrails
+## Day-to-day workflow
 
-Each stack ships `.cursor/rules`, `.cursor/skills/add-feature-*` (with auto `learned/` logs), Karpathy guidelines, and `AGENTS.md`.
+Run these from the **project root** (inside `myapp/`):
+
+| Command | What it does |
+|---------|----------------|
+| `make help` | List all targets |
+| `make status` | Show which stacks exist |
+| `make dev` | Start backend, wait for `/health/live`, launch web dev server |
+| `make test` | Run tests for all present stacks |
+| `make build` | Build backend + web |
+| `make doctor` | Check toolchains per stack |
+| `make db-up` | Start Postgres (Docker) |
+| `make db-down` | Stop Postgres container |
+
+Per-stack shortcuts: `make backend.run`, `make web.dev`, `make app.run`, `make web.test`, etc.
+
+Add a stack you skipped at create time:
 
 ```bash
-arlox skills update    # refresh templates; keeps your learned/ files
+arlox add --web
 ```
 
 ---
 
-## Makefile (optional)
+## Database (Postgres)
 
-| Command | What |
-|---------|------|
-| `source ./install.sh` | **Use this** — full setup |
-| `make verify` | Automated test (temp folder, not your cwd) |
-| `make doctor` | Check tools on PATH |
-| `make uninstall` | Remove binary |
+Generated projects include **`docker-compose.yml`** with Postgres 16 on **host port 5433** (avoids clashing with a local Postgres on 5432).
 
-See [scripts/verify.md](scripts/verify.md) for manual verification.
+Backend config (`backend/configs/local/app.env`):
+
+```text
+DB_HOST=localhost
+DB_PORT=5433
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=<project-name>
+```
+
+Without Docker, the backend Makefile falls back to Homebrew Postgres + `createdb` on macOS.
+
+---
+
+## AI agent guardrails
+
+arlox is designed for **AI-assisted development** in Cursor and Antigravity:
+
+- **Per-stack rules** — architecture, Tailwind, Makefile conventions, Karpathy guidelines
+- **Skills** — `add-feature-backend`, `add-feature-web`, `add-feature-mobile`, `add-feature-fullstack`
+- **Fullstack order** — backend → web → app, one stack at a time, with API contract docs in `learned/`
+
+Refresh templates after upgrading arlox:
+
+```bash
+cd myapp && arlox skills update
+```
+
+Locally modified skill files are preserved unless you pass `--force`.
+
+---
+
+## Maintaining arlox & workspaces
+
+| Situation | Command |
+|-----------|---------|
+| Updated arlox source repo | `arlox upgrade` |
+| Missing Makefile, `.env`, or `.cursor` files | `cd myapp && arlox repair` |
+| New arlox version, want latest skills | `arlox skills update` |
+| Check what changed vs original scaffold | `arlox repair` (drift section) |
+| Tooling problems | `arlox doctor` |
+
+---
+
+## Contributing & verification
+
+For arlox developers (from the repo root):
+
+```bash
+git clone https://github.com/sureshmopidevi/arlox.git ~/arlox
+cd ~/arlox
+./install.sh
+
+make test      # go test ./...
+make verify    # full smoke test in a temp dir (create, build, test, repair, upgrade)
+make doctor    # local toolchain check
+```
+
+Release version: [`internal/version/VERSION`](internal/version/VERSION) (currently **0.10.0**). Bump on every CLI or template change — see [`.cursor/rules/versioning.mdc`](.cursor/rules/versioning.mdc) and [`AGENTS.md`](AGENTS.md).
+
+Manual verification checklist: [`scripts/verify.md`](scripts/verify.md).
 
 ---
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+MIT — see [LICENSE](LICENSE).

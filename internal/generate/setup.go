@@ -3,10 +3,12 @@ package generate
 import (
 	"fmt"
 	"os"
-	"os/exec"
+	osexec "os/exec"
 	"path/filepath"
 	"strings"
 
+	arloxexec "github.com/sureshmopidevi/arlox/internal/exec"
+	"github.com/sureshmopidevi/arlox/internal/ui"
 	"github.com/sureshmopidevi/arlox/internal/workspace"
 )
 
@@ -22,10 +24,11 @@ func finalizeStack(stack workspace.Stack, stackDir string, data Data) (string, e
 			return "", err
 		}
 		var warning string
-		if err := runInDir(stackDir, "go", "mod", "tidy"); err != nil {
+		ui.Dim("backend: running go mod tidy…")
+		if err := arloxexec.RunInDir(stackDir, "go", "mod", "tidy"); err != nil {
 			warning = "go mod tidy skipped/failed (offline or network error) — run: make backend.tidy"
 		}
-		tryPostgresSetup(data.Name)
+		tryPostgresSetup(stackDir, data.Name)
 		return warning, nil
 
 	case workspace.Web:
@@ -36,28 +39,21 @@ func finalizeStack(stack workspace.Stack, stackDir string, data Data) (string, e
 			return "", err
 		}
 		var warning string
-		if err := runInDir(stackDir, "npm", "install", "--no-audit", "--no-fund"); err != nil {
+		ui.Dim("web: running npm install…")
+		if err := arloxexec.RunInDir(stackDir, "npm", "install", "--no-audit", "--no-fund"); err != nil {
 			warning = "npm install skipped/failed (offline or network error) — run: make web.install"
 		}
 		return warning, nil
 
 	case workspace.App:
 		var warning string
-		if err := runInDir(stackDir, "flutter", "pub", "get"); err != nil {
+		ui.Dim("app: running flutter pub get…")
+		if err := arloxexec.RunInDir(stackDir, "flutter", "pub", "get"); err != nil {
 			warning = "flutter pub get skipped/failed (offline or network error) — run: make app.get"
 		}
 		return warning, nil
 	}
 	return "", nil
-}
-
-func runInDir(dir, name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Dir = dir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("%w\n%s", err, out)
-	}
-	return nil
 }
 
 func copyIfMissing(src, dst string) error {
@@ -75,14 +71,24 @@ func copyIfMissing(src, dst string) error {
 }
 
 // tryPostgresSetup starts local Postgres (best effort) and creates the project DB.
-func tryPostgresSetup(projectName string) {
-	if _, err := exec.LookPath("createdb"); err != nil {
+func tryPostgresSetup(stackDir, projectName string) {
+	workspaceRoot := filepath.Dir(stackDir)
+	composeFile := filepath.Join(workspaceRoot, "docker-compose.yml")
+	if _, err := os.Stat(composeFile); err == nil {
+		if _, err := osexec.LookPath("docker"); err == nil {
+			ui.Dim("backend: starting postgres via docker compose…")
+			_ = arloxexec.RunInDir(workspaceRoot, "docker", "compose", "up", "-d", "postgres")
+			return
+		}
+	}
+
+	if _, err := osexec.LookPath("createdb"); err != nil {
 		return
 	}
-	_ = exec.Command("brew", "services", "start", "postgresql@16").Run()
-	_ = exec.Command("brew", "services", "start", "postgresql").Run()
+	_ = osexec.Command("brew", "services", "start", "postgresql@16").Run()
+	_ = osexec.Command("brew", "services", "start", "postgresql").Run()
 	dbName := dbNameFromProject(projectName)
-	_ = exec.Command("createdb", dbName).Run()
+	_ = osexec.Command("createdb", dbName).Run()
 }
 
 func dbNameFromProject(name string) string {

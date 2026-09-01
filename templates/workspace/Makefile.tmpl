@@ -11,9 +11,9 @@ BACKEND_MARKER := $(BACKEND_DIR)/go.mod
 WEB_MARKER     := $(WEB_DIR)/package.json
 APP_MARKER     := $(APP_DIR)/pubspec.yaml
 
-.PHONY: help status setup doctor dev run build test
+.PHONY: help status setup doctor dev run build test db-up db-down
 .PHONY: backend.setup backend.run backend.build backend.test backend.lint backend.tidy backend.doctor
-.PHONY: web.install web.dev web.build web.preview web.doctor
+.PHONY: web.install web.dev web.build web.test web.preview web.doctor
 .PHONY: app.get app.run app.analyze app.test app.clean app.doctor
 
 help: ## Show available targets
@@ -32,6 +32,7 @@ status: ## List which stacks exist in this workspace
 	@if [ -f "$(APP_MARKER)" ]; then echo "  app      yes  ($(APP_DIR)/)"; else echo "  app      no   (arlox add --app)"; fi
 
 setup: ## One-time setup for all present stacks
+	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) db-up; fi
 	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) backend.setup; else echo "skip backend (not in workspace)"; fi
 	@if [ -f "$(WEB_MARKER)" ]; then $(MAKE) web.install; else echo "skip web (not in workspace)"; fi
 	@if [ -f "$(APP_MARKER)" ]; then $(MAKE) app.get; else echo "skip app (not in workspace)"; fi
@@ -110,8 +111,17 @@ build: ## Build all present stacks
 
 test: ## Run tests for all present stacks
 	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) backend.test; else echo "skip backend (not in workspace)"; fi
-	@if [ -f "$(WEB_MARKER)" ]; then echo "skip web (no test script in template)"; fi
+	@if [ -f "$(WEB_MARKER)" ]; then $(MAKE) web.test; else echo "skip web (not in workspace)"; fi
 	@if [ -f "$(APP_MARKER)" ]; then $(MAKE) app.test; else echo "skip app (not in workspace)"; fi
+
+db-up: ## Start postgres via docker compose (when backend stack exists)
+	@test -f docker-compose.yml || (echo "docker-compose.yml not found" && exit 1)
+	@command -v docker >/dev/null 2>&1 || (echo "docker not found — install Docker or use local postgres" && exit 1)
+	@docker compose up -d postgres
+
+db-down: ## Stop postgres docker compose service
+	@test -f docker-compose.yml || (echo "docker-compose.yml not found" && exit 1)
+	@docker compose down
 
 # --- Backend (delegates to backend/Makefile) ---
 
@@ -160,6 +170,10 @@ web.dev: ## Web: Vite dev server
 web.build: ## Web: production build
 	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: arlox add --web" && exit 1)
 	@cd $(WEB_DIR) && npm run build
+
+web.test: ## Web: vitest
+	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: arlox add --web" && exit 1)
+	@cd $(WEB_DIR) && npm test
 
 web.preview: ## Web: preview production build
 	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: arlox add --web" && exit 1)

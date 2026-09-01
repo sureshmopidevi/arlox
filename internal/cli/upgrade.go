@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
+	osexec "os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	arloxexec "github.com/sureshmopidevi/arlox/internal/exec"
 	"github.com/sureshmopidevi/arlox/internal/ui"
 	"github.com/sureshmopidevi/arlox/internal/version"
 )
@@ -47,10 +48,17 @@ func runUpgrade(sourceFlag string, pull bool) error {
 	before := version.Version
 	ui.Header("upgrade", "arlox "+before)
 
-	if _, err := exec.LookPath("go"); err != nil {
+	if _, err := osexec.LookPath("go"); err != nil {
 		ui.Error("go not found on PATH — install Go first: https://go.dev/dl/")
 		return fmt.Errorf("go required")
 	}
+
+	gopathBin, err := goPathBin()
+	if err != nil {
+		ui.Error(err.Error())
+		return err
+	}
+	binaryPath := filepath.Join(gopathBin, "arlox")
 
 	root, err := findArloxSource(sourceFlag)
 	if err != nil {
@@ -60,34 +68,64 @@ func runUpgrade(sourceFlag string, pull bool) error {
 	ui.Dim("source  " + root)
 
 	if pull {
-		ui.Dim("git     pull --ff-only")
-		if err := gitPullFF(root); err != nil {
-			ui.Error("git pull failed: " + err.Error())
-			return err
+		if isGitCheckout(root) {
+			ui.Dim("git     pull --ff-only")
+			if err := runGitPullFF(root); err != nil {
+				ui.Error("git pull failed: " + err.Error())
+				return err
+			}
+			ui.Success("git pull complete")
+		} else {
+			ui.Dim("git     skipped (not a git checkout)")
 		}
 	} else {
 		ui.Dim("git     skipped (--no-pull)")
 	}
 
 	ui.Dim("build   go build → bin/arlox")
-	if err := runInDir(root, "go", "build", "-o", "bin/arlox", "./cmd/arlox"); err != nil {
+	if err := arloxexec.RunInDir(root, "go", "build", "-o", "bin/arlox", "./cmd/arlox"); err != nil {
 		ui.Error("build failed: " + err.Error())
 		return err
 	}
+	ui.Success("build complete")
 
-	ui.Dim("install go install → $(go env GOPATH)/bin")
-	if err := runInDir(root, "go", "install", "./cmd/arlox"); err != nil {
+	ui.Dim("install go install → " + gopathBin)
+	if err := arloxexec.RunInDir(root, "go", "install", "./cmd/arlox"); err != nil {
 		ui.Error("install failed: " + err.Error())
 		return err
 	}
+	ui.Success("installed to " + binaryPath)
+	ui.Dim("binary  " + binaryPath)
 
-	after := installedVersion()
+	after := binaryVersionAt(binaryPath)
 	if after == "" {
 		after = "(unknown — run: arlox version)"
 	}
-	ui.Success(fmt.Sprintf("upgraded  %s → %s", before, after))
+
+	if after == before {
+		ui.Success(fmt.Sprintf("reinstalled  %s", before))
+	} else if strings.HasPrefix(after, "(") {
+		ui.Success(fmt.Sprintf("reinstalled  %s", before))
+	} else {
+		ui.Success(fmt.Sprintf("upgraded  %s → %s", before, after))
+	}
+
+	ui.Dim("hint    run: arlox version")
+	ui.Dim("hint    in workspace: arlox skills update")
 	fmt.Println()
 	return nil
+}
+
+func goPathBin() (string, error) {
+	out, err := osexec.Command("go", "env", "GOPATH").Output()
+	if err != nil {
+		return "", fmt.Errorf("go env GOPATH failed: %w", err)
+	}
+	gopath := strings.TrimSpace(string(out))
+	if gopath == "" {
+		return "", fmt.Errorf("GOPATH is empty")
+	}
+	return filepath.Join(gopath, "bin"), nil
 }
 
 func findArloxSource(explicit string) (string, error) {
@@ -138,35 +176,24 @@ func isArloxRepo(dir string) bool {
 	return true
 }
 
-func gitPullFF(root string) error {
-	if _, err := os.Stat(filepath.Join(root, ".git")); err != nil {
-		return nil // not a git checkout; skip quietly
-	}
-	cmd := exec.Command("git", "pull", "--ff-only")
+func isGitCheckout(root string) bool {
+	_, err := os.Stat(filepath.Join(root, ".git"))
+	return err == nil
+}
+
+func runGitPullFF(root string) error {
+	cmd := osexec.Command("git", "pull", "--ff-only")
 	cmd.Dir = root
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
-func runInDir(dir, name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
-func installedVersion() string {
-	path, err := exec.LookPath("arlox")
+func binaryVersionAt(path string) string {
+	out, err := osexec.Command(path, "version").Output()
 	if err != nil {
 		return ""
 	}
-	out, err := exec.Command(path, "version").Output()
-	if err != nil {
-		return ""
-	}
-	// "arlox 0.1.0" → "0.1.0"
 	fields := strings.Fields(strings.TrimSpace(string(out)))
 	if len(fields) >= 2 {
 		return fields[len(fields)-1]

@@ -11,7 +11,10 @@ import (
 	"strings"
 	"text/template"
 
+	arloxexec "github.com/sureshmopidevi/arlox/internal/exec"
 	tmplfs "github.com/sureshmopidevi/arlox/templates"
+	"github.com/sureshmopidevi/arlox/internal/ui"
+	"github.com/sureshmopidevi/arlox/internal/version"
 	"github.com/sureshmopidevi/arlox/internal/workspace"
 )
 
@@ -75,13 +78,12 @@ func Stack(root string, stack workspace.Stack, data Data) (string, error) {
 
 	// For Flutter: run flutter create first, then overlay our templates.
 	if stack == workspace.App {
-		cmd := exec.Command("flutter", "create",
+		ui.Dim("app: running flutter create…")
+		if err := arloxexec.RunInDir(stackDir, "flutter", "create",
 			"--org", data.Org,
 			"--project-name", data.Package,
-			".")
-		cmd.Dir = stackDir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return "", cleanup(fmt.Errorf("flutter create: %w\n%s", err, out))
+			"."); err != nil {
+			return "", cleanup(fmt.Errorf("flutter create: %w", err))
 		}
 	}
 
@@ -237,27 +239,45 @@ func locallyModified(localPath, templatePath string) bool {
 }
 
 type originManifest struct {
-	Stack  string            `json:"stack"`
-	Hashes map[string]string `json:"hashes"`
+	Stack        string            `json:"stack"`
+	ArloxVersion string            `json:"arloxVersion"`
+	Hashes       map[string]string `json:"hashes"`
 }
 
 func writeManifest(dir, stack string) error {
 	m := originManifest{
-		Stack:  stack,
-		Hashes: make(map[string]string),
+		Stack:        stack,
+		ArloxVersion: version.Version,
+		Hashes:       make(map[string]string),
 	}
-	_ = fs.WalkDir(tmplfs.FS, stack, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		info, err := d.Info()
+		if err != nil {
 			return nil
 		}
-		raw, readErr := tmplfs.FS.ReadFile(path)
-		if readErr != nil {
+		if info.IsDir() || !info.Mode().IsRegular() {
 			return nil
 		}
-		sum := md5.Sum(raw)
-		m.Hashes[path] = fmt.Sprintf("%x", sum)
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		if shouldSkipManifestPath(rel) {
+			return nil
+		}
+		sum, err := fileMD5(path)
+		if err != nil {
+			return err
+		}
+		m.Hashes[rel] = sum
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 	data, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return err

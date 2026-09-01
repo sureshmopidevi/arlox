@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sureshmopidevi/arlox/internal/exec"
 	"github.com/sureshmopidevi/arlox/internal/generate"
 	"github.com/sureshmopidevi/arlox/internal/ui"
 	"github.com/sureshmopidevi/arlox/internal/workspace"
@@ -15,8 +16,9 @@ import (
 
 func repairCmd() *cobra.Command {
 	var (
-		force bool
-		deps  bool
+		force      bool
+		deps       bool
+		checkDrift bool
 	)
 
 	cmd := &cobra.Command{
@@ -28,6 +30,7 @@ func repairCmd() *cobra.Command {
   • Restores missing .cursor rules and skills
   • Restores missing .env and app.env configs from templates
   • Re-initializes missing git repositories in stacks
+  • Reports scaffold drift from .origin-manifest.json
   • Optionally installs missing stack dependencies (go.sum, node_modules, pub get)`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -35,12 +38,13 @@ func repairCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return runRepair(cwd, force, deps)
+			return runRepair(cwd, force, deps, checkDrift)
 		},
 	}
 
 	cmd.Flags().BoolVar(&force, "force", false, "overwrite locally modified skills/rules with defaults")
 	cmd.Flags().BoolVar(&deps, "deps", true, "install missing stack dependencies (go mod tidy, npm install, flutter pub get)")
+	cmd.Flags().BoolVar(&checkDrift, "check-drift", true, "report files that differ from the original scaffold")
 	return cmd
 }
 
@@ -62,7 +66,7 @@ func (r *repairReport) warn(item string) {
 	r.warnings = append(r.warnings, item)
 }
 
-func runRepair(cwd string, force, installDeps bool) error {
+func runRepair(cwd string, force, installDeps, checkDrift bool) error {
 	root, ok := workspace.DetectWorkspace(cwd)
 	if !ok {
 		ui.Header("repair", "system check")
@@ -161,7 +165,7 @@ func runRepair(cwd string, force, installDeps bool) error {
 				goSum := filepath.Join(stackDir, "go.sum")
 				if _, err := os.Stat(goSum); os.IsNotExist(err) {
 					ui.Dim("backend: running go mod tidy...")
-					if err := runInDir(stackDir, "go", "mod", "tidy"); err != nil {
+					if err := exec.RunInDir(stackDir, "go", "mod", "tidy"); err != nil {
 						report.warn("backend: go mod tidy had issues: " + err.Error())
 					} else {
 						report.fix("backend: resolved go.sum dependencies")
@@ -191,7 +195,7 @@ func runRepair(cwd string, force, installDeps bool) error {
 				nodeModules := filepath.Join(stackDir, "node_modules")
 				if _, err := os.Stat(nodeModules); os.IsNotExist(err) {
 					ui.Dim("web: running npm install...")
-					if err := runInDir(stackDir, "npm", "install", "--no-audit", "--no-fund"); err != nil {
+					if err := exec.RunInDir(stackDir, "npm", "install", "--no-audit", "--no-fund"); err != nil {
 						report.warn("web: npm install had issues: " + err.Error())
 					} else {
 						report.fix("web: installed node_modules")
@@ -207,7 +211,7 @@ func runRepair(cwd string, force, installDeps bool) error {
 				dartTool := filepath.Join(stackDir, ".dart_tool")
 				if _, err := os.Stat(dartTool); os.IsNotExist(err) {
 					ui.Dim("app: running flutter pub get...")
-					if err := runInDir(stackDir, "flutter", "pub", "get"); err != nil {
+					if err := exec.RunInDir(stackDir, "flutter", "pub", "get"); err != nil {
 						report.warn("app: flutter pub get had issues: " + err.Error())
 					} else {
 						report.fix("app: fetched flutter packages")
@@ -217,6 +221,10 @@ func runRepair(cwd string, force, installDeps bool) error {
 				}
 			}
 		}
+	}
+
+	if checkDrift {
+		printDriftReport(root, presentStacks)
 	}
 
 	fmt.Println()
@@ -246,4 +254,49 @@ func runRepair(cwd string, force, installDeps bool) error {
 
 	ui.Success(fmt.Sprintf("workspace repair completed for %s", name))
 	return nil
+}
+
+func printDriftReport(root string, stacks []string) {
+	const maxPaths = 10
+	var anyDrift bool
+
+	for _, stackName := range stacks {
+		stackDir := filepath.Join(root, stackName)
+		manifestPath := filepath.Join(stackDir, ".origin-manifest.json")
+		if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
+			continue
+		}
+
+		report, err := generate.CheckDrift(stackDir)
+		if err != nil {
+			ui.Warn(fmt.Sprintf("%s: drift check failed: %v", stackName, err))
+			continue
+		}
+		if len(report.Missing) == 0 && len(report.Modified) == 0 {
+			continue
+		}
+
+		if !anyDrift {
+			fmt.Println("  Scaffold Drift:")
+			anyDrift = true
+		}
+
+		for _, p := range report.Missing {
+			ui.Warn(fmt.Sprintf("%s: missing %s", stackName, p))
+		}
+		shown := 0
+		for _, p := range report.Modified {
+			if shown >= maxPaths {
+				remaining := len(report.Modified) - shown
+				ui.Dim(fmt.Sprintf("%s: … and %d more modified file(s)", stackName, remaining))
+				break
+			}
+			ui.Warn(fmt.Sprintf("%s: modified %s", stackName, p))
+			shown++
+		}
+	}
+
+	if anyDrift {
+		fmt.Println()
+	}
 }

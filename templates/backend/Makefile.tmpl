@@ -34,7 +34,15 @@ doctor:
 	@echo "=== env file ===" && (test -f configs/local/app.env && echo "OK" || echo "MISSING — run: make setup")
 
 db-up:
-	@brew services start postgresql@16 2>/dev/null || brew services start postgresql 2>/dev/null || true
+	@if command -v docker >/dev/null 2>&1 && [ -f ../docker-compose.yml ]; then \
+		docker compose -f ../docker-compose.yml up -d postgres; \
+	else \
+		brew services start postgresql@16 2>/dev/null || brew services start postgresql 2>/dev/null || true; \
+	fi
 
 db-create:
-	@createdb $(DB_NAME) 2>/dev/null && echo "Created DB: $(DB_NAME)" || echo "DB already exists: $(DB_NAME)"
+	@if command -v docker >/dev/null 2>&1 && [ -f ../docker-compose.yml ]; then \
+		echo "Using postgres from docker-compose (DB: $(DB_NAME))"; \
+	else \
+		createdb $(DB_NAME) 2>/dev/null && echo "Created DB: $(DB_NAME)" || echo "DB already exists: $(DB_NAME)"; \
+	fi

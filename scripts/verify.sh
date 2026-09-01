@@ -88,6 +88,7 @@ test -f "${DEMO}/backend/configs/local/app.env" || { echo "fail: backend app.env
 test -f "${DEMO}/web/.env" || { echo "fail: web .env missing"; exit 1; }
 test -f "${DEMO}/app/.dart_tool/package_config.json" || { echo "fail: app pub get missing"; exit 1; }
 test -f "${DEMO}/Makefile" || { echo "fail: root Makefile missing"; exit 1; }
+test -f "${DEMO}/docker-compose.yml" || { echo "fail: docker-compose.yml missing"; exit 1; }
 test -f "${DEMO}/.cursor/skills/add-feature-fullstack/SKILL.md" || { echo "fail: fullstack skill missing"; exit 1; }
 test -f "${DEMO}/.cursor/rules/versioning.mdc" || { echo "fail: versioning rule missing"; exit 1; }
 echo "ok"
@@ -152,6 +153,12 @@ npm run build
 echo "ok"
 
 echo ""
+echo "== 5b. web test =="
+cd "${DEMO}/web"
+npm test
+echo "ok"
+
+echo ""
 echo "== 6. flutter analyze =="
 if ! command -v flutter >/dev/null 2>&1; then
   echo "skip (flutter not on PATH)"
@@ -169,6 +176,29 @@ test -f "${DEMO}/web/.cursor/rules/tailwind.mdc"
 test -f "${DEMO}/backend/.cursor/skills/add-feature-backend/SKILL.md" || { echo "fail: backend add-feature skill missing"; exit 1; }
 test -f "${DEMO}/web/.cursor/skills/add-feature-web/SKILL.md" || { echo "fail: web add-feature skill missing"; exit 1; }
 test -f "${DEMO}/app/.cursor/skills/add-feature-mobile/learned/README.md" || { echo "fail: app add-feature skill missing"; exit 1; }
+echo "ok"
+
+echo ""
+echo "== 8. repair =="
+cd "${DEMO}"
+NO_COLOR=1 "${ARLOX}" repair --deps=false --check-drift=false >/dev/null
+echo "ok"
+
+echo ""
+echo "== 9. skills update =="
+NO_COLOR=1 "${ARLOX}" skills update >/dev/null
+test -f "${DEMO}/.cursor/skills/add-feature-fullstack/SKILL.md" || { echo "fail: skills update missing fullstack skill"; exit 1; }
+echo "ok"
+
+echo ""
+echo "== 10. upgrade smoke =="
+cd "${ROOT}"
+UPGRADE_OUT="$(NO_COLOR=1 "${ARLOX}" upgrade --no-pull --source "${ROOT}" 2>&1)"
+echo "${UPGRADE_OUT}" | grep -Eq "reinstalled|upgraded" || {
+  echo "fail: upgrade missing success line"
+  echo "${UPGRADE_OUT}"
+  exit 1
+}
 echo "ok"
 
 echo ""
