@@ -1,0 +1,11 @@
+---
+description: Maven development tooling
+alwaysApply: true
+---
+
+# Tooling
+
+- Use `mvn spring-boot:run` for development.
+- Run tests with `mvn test`.
+- Build the executable jar with `mvn package`.
+- This project relies on an installed Maven command; do not reference a wrapper.

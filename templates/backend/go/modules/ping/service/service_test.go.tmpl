@@ -1,0 +1,9 @@
+package service
+
+import "testing"
+
+func TestPing(t *testing.T) {
+	if got := New(nil).Ping(); got != "pong" {
+		t.Fatalf("Ping() = %q, want %q", got, "pong")
+	}
+}

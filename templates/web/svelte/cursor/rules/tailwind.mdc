@@ -1,0 +1,13 @@
+---
+description: Tailwind CSS styling conventions
+globs:
+  - "src/**/*.{svelte,css}"
+---
+
+# Tailwind
+
+- Use Tailwind utilities in Svelte markup.
+- Keep the Tailwind v4 import in `src/style.css`.
+- Prefer semantic HTML, responsive utilities, and visible focus states.
+- Use class directives for simple conditional styles.
+- Extract shared UI only after real reuse appears.

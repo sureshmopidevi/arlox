@@ -1,0 +1,15 @@
+---
+description: Nuxt application architecture
+globs:
+  - "app/**/*.{ts,vue}"
+  - "server/**/*.ts"
+---
+
+# Architecture
+
+- Follow Nuxt file conventions for pages, layouts, components, composables, and server routes.
+- Use `<script setup lang="ts">` and Nuxt auto-imports.
+- Fetch SSR-aware data with `useFetch` or `useAsyncData`.
+- Put reusable UI in `app/components/` and reusable state in `app/composables/`.
+- Keep secrets and privileged integrations in `server/`.
+- Keep tests beside the behavior they cover.

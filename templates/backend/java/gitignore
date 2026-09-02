@@ -1,0 +1,9 @@
+target/
+.env
+data/
+*.log
+.idea/
+.classpath
+.project
+.settings/
+.origin-manifest.json

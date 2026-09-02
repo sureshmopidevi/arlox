@@ -1,0 +1,12 @@
+---
+description: Spring Boot architecture constraints
+alwaysApply: true
+---
+
+# Architecture
+
+- Keep controllers focused on HTTP concerns and validation.
+- Put business logic in services and persistence in Spring Data repositories.
+- Use constructor injection; do not use field injection in production code.
+- Keep JPA entities in domain feature packages.
+- Do not add a second web framework, ORM, or dependency-injection container.

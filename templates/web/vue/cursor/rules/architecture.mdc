@@ -1,0 +1,14 @@
+---
+description: Vue application architecture
+globs:
+  - "src/**/*.{ts,vue}"
+---
+
+# Architecture
+
+- Use Vue 3 Composition API with `<script setup lang="ts">`.
+- Put reusable UI in `src/components/` and feature code in `src/features/<name>/`.
+- Keep views thin; composables own reusable reactive behavior.
+- Keep HTTP and persistence behind typed modules, not inside templates.
+- Pass data with typed props and emit explicit events.
+- Keep tests beside the components or composables they cover.

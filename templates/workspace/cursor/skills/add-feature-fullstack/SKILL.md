@@ -1,7 +1,7 @@
 ---
 name: add-feature-fullstack
 description: >-
-  Implements a feature across backend, web, and Flutter app in strict order
+  Implements a feature across backend, web, and app variants in strict order
   (backend → web → app) with API contracts and verification between phases.
   Use when the user asks to add a full-stack feature, cross-stack feature,
   feature for backend and web, or anything spanning multiple arlox stacks.
@@ -16,15 +16,15 @@ Run **one stack at a time**. Never parallelize backend/web/app for the same feat
 - User wants a feature in more than one of: API, admin web, Flutter app
 - Phrases like: "full stack", "backend and web", "across stacks", "API + UI"
 
-**Do not use** for single-stack work — use `add-feature-backend`, `add-feature-web`, or `add-feature-mobile` instead.
+**Do not use** for single-stack work — use the add-feature skill inside that stack instead.
 
 ## Success criteria (all that apply)
 
 | Stack | Must prove |
 |-------|------------|
-| Backend | `make test` green + `learned/<feature>.md` with API contract |
-| Web | Types + API client + UI + route/nav + `npm run build` green |
-| App | Feature slice + route + `flutter analyze` green |
+| Backend | `make backend.test` green + `learned/<feature>.md` with API contract |
+| Web | Variant-appropriate feature + `make web.build` green |
+| App | Variant-appropriate feature + `make app.verify` green |
 
 If `web/` exists, **Phase 2 (web) is mandatory** — do not stop after backend.
 
@@ -39,9 +39,9 @@ app/      → Phase 3
 State the plan to the user before coding:
 
 ```text
-1. backend → verify: make test + contract doc
-2. web     → verify: npm run build
-3. app     → verify: flutter analyze
+1. backend → verify: make backend.test + contract doc
+2. web     → verify: make web.build
+3. app     → verify: make app.verify
 ```
 
 Skip only missing folders. Never skip an existing stack.
@@ -74,7 +74,9 @@ Create `backend/.cursor/skills/add-feature-backend/learned/<feature>.md` with th
 - Auth header: `Authorization: Bearer <token>`
 ```
 
-**Verify:** `cd backend && make test`  
+Read `backend/.cursor/skills/dev-workflow/SKILL.md` for variant-specific commands.
+
+**Verify:** `make backend.test` from the workspace root.
 Do **not** start web until this passes and the contract file exists.
 
 ## 2. Phase — Web (if `web/` exists)
@@ -84,25 +86,23 @@ Work **only** under `web/`. Follow `web/.cursor/skills/add-feature-web/SKILL.md`
 **Must consume the backend contract** from  
 `backend/.cursor/skills/add-feature-backend/learned/<feature>.md` (or ask if missing).
 
-**Required deliverables:**
+Follow the installed web variant's architecture and add-feature skill. Required
+file layout and routing differ between React, Next.js, Vue, Svelte, Angular,
+and Nuxt; do not impose one framework's conventions on another.
 
-1. `src/features/<name>/types.ts` — match API shapes
-2. `src/features/<name>/api/<name>Api.ts` — calls via `apiClient`
-3. Query/mutation hooks
-4. Feature UI component + thin page
-5. Route in `src/app/router.tsx`
-6. Nav item in `src/layouts/AdminSidebar.tsx` (unless user said otherwise)
-
-**Verify:** `cd web && npm run build`  
+**Verify:** `make web.build` from the workspace root.
 Do **not** start app until this passes.
 
 ## 3. Phase — App (if `app/` exists)
 
-Work **only** under `app/`. Follow `app/.cursor/skills/add-feature-mobile/SKILL.md`.
+Work **only** under `app/`. Follow the add-feature skill present under
+`app/.cursor/skills/`.
 
 Consume the same backend contract. Do not invent endpoints.
 
-**Verify:** `cd app && flutter analyze`
+Read `app/.cursor/skills/dev-workflow/SKILL.md` for variant-specific commands.
+
+**Verify:** `make app.verify` from the workspace root.
 
 ## Subagent pattern (preferred)
 
@@ -110,9 +110,9 @@ For each phase, use a Task/subagent with:
 
 ```text
 Scope: only <stack>/ 
-Read: backend → add-feature-backend | web → add-feature-web | app → add-feature-mobile
+Read: the stack's architecture rule, dev-workflow, and add-feature skill
 Contract: backend/.cursor/skills/add-feature-backend/learned/<feature>.md  (web/mobile)
-Verify: <stack verify command>
+Verify: make backend.test | make web.build | make app.verify
 Return: files changed + verify output summary
 ```
 

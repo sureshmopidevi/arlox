@@ -21,10 +21,75 @@ const (
 
 var allStacks = []Stack{Backend, Web, App}
 
-var stackMarkers = map[Stack]string{
-	Backend: "go.mod",
-	Web:     "package.json",
-	App:     "pubspec.yaml",
+// Variant identifies a framework within a stack.
+type Variant string
+
+const (
+	GoGin         Variant = "go"
+	PyFastAPI     Variant = "python"
+	NodeExpress   Variant = "node-express"
+	NodeFastify   Variant = "node-fastify"
+	JavaSpring    Variant = "java"
+	ReactVite     Variant = "react-vite"
+	NextJS        Variant = "nextjs"
+	VueVite       Variant = "vue"
+	SvelteVite    Variant = "svelte"
+	Angular       Variant = "angular"
+	Nuxt          Variant = "nuxt"
+	Flutter       Variant = "flutter"
+	ReactPWA      Variant = "react-pwa"
+	NativeIOS     Variant = "ios"
+	NativeAndroid Variant = "android"
+)
+
+var (
+	BackendVariants = []Variant{GoGin, PyFastAPI, NodeExpress, NodeFastify, JavaSpring}
+	WebVariants     = []Variant{ReactVite, NextJS, VueVite, SvelteVite, Angular, Nuxt}
+	AppVariants     = []Variant{Flutter, ReactPWA, NativeIOS, NativeAndroid}
+)
+
+var stackMarkerCandidates = map[Stack][]string{
+	Backend: {"go.mod", "pyproject.toml", "pom.xml", "package.json"},
+	Web:     {"package.json", "angular.json"},
+	App:     {"pubspec.yaml", "package.json", "Package.swift", "build.gradle.kts"},
+}
+
+// VariantsForStack returns the supported variants for stack.
+func VariantsForStack(stack Stack) []Variant {
+	switch stack {
+	case Backend:
+		return BackendVariants
+	case Web:
+		return WebVariants
+	case App:
+		return AppVariants
+	default:
+		return nil
+	}
+}
+
+// DefaultVariant returns the legacy variant for stack.
+func DefaultVariant(stack Stack) Variant {
+	switch stack {
+	case Backend:
+		return GoGin
+	case Web:
+		return ReactVite
+	case App:
+		return Flutter
+	default:
+		return ""
+	}
+}
+
+// ValidVariant reports whether variant belongs to stack.
+func ValidVariant(stack Stack, variant Variant) bool {
+	for _, candidate := range VariantsForStack(stack) {
+		if candidate == variant {
+			return true
+		}
+	}
+	return false
 }
 
 // workspaceFile mirrors the .code-workspace JSON format.
@@ -106,14 +171,33 @@ func FindWorkspaceFile(root string) string {
 	return found
 }
 
-// StackExists reports whether the stack directory contains its marker file.
+// StackExists reports whether the stack directory contains any recognized marker file.
 func StackExists(root string, stack Stack) bool {
-	marker := stackMarkers[stack]
-	if marker == "" {
-		return false
+	for _, marker := range stackMarkerCandidates[stack] {
+		if _, err := os.Stat(filepath.Join(root, string(stack), marker)); err == nil {
+			return true
+		}
 	}
-	_, err := os.Stat(filepath.Join(root, string(stack), marker))
-	return err == nil
+	return false
+}
+
+// DetectVariant reads the generated stack's manifest and returns its variant.
+func DetectVariant(root string, stack Stack) (Variant, bool) {
+	data, err := os.ReadFile(filepath.Join(root, string(stack), ".origin-manifest.json"))
+	if err != nil {
+		return "", false
+	}
+	var manifest struct {
+		Stack   Stack   `json:"stack"`
+		Variant Variant `json:"variant"`
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return "", false
+	}
+	if manifest.Stack != stack || !ValidVariant(stack, manifest.Variant) {
+		return "", false
+	}
+	return manifest.Variant, true
 }
 
 // StackPresentButEmpty reports whether the stack dir exists but has no marker file.

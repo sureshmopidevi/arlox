@@ -1,0 +1,21 @@
+import XCTest
+@testable import AppFeature
+
+private struct StubGreetingRepository: GreetingRepository {
+    let value: String
+
+    func greeting() async -> String { value }
+}
+
+@MainActor
+final class HomeViewModelTests: XCTestCase {
+    func testLoadPublishesRepositoryGreeting() async {
+        let subject = HomeViewModel(
+            repository: StubGreetingRepository(value: "[[.DisplayName]] ready")
+        )
+
+        await subject.load()
+
+        XCTAssertEqual(subject.greeting, "[[.DisplayName]] ready")
+    }
+}

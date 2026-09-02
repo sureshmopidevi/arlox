@@ -1,0 +1,19 @@
+// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+    name: "[[.Name]]",
+    platforms: [
+        .iOS(.v17),
+        .macOS(.v14),
+    ],
+    products: [
+        .executable(name: "[[.Name]]", targets: ["App"]),
+        .library(name: "AppFeature", targets: ["AppFeature"]),
+    ],
+    targets: [
+        .executableTarget(name: "App", dependencies: ["AppFeature"]),
+        .target(name: "AppFeature"),
+        .testTarget(name: "AppFeatureTests", dependencies: ["AppFeature"]),
+    ]
+)

@@ -1,0 +1,19 @@
+---
+description: Persist iOS project decisions
+alwaysApply: false
+---
+
+# Learning
+
+After a feature or significant fix, append a newest-first entry to
+`.cursor/skills/add-feature-ios/learned/README.md`:
+
+```markdown
+## YYYY-MM-DD — <title>
+**What**: <change>
+**Why**: <reason>
+**Xcode**: <simulator/signing/capability impact>
+**Gotchas**: <non-obvious detail>
+```
+
+Prefix deliberately deferred work with `[PENDING]`.

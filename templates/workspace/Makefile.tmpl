@@ -1,200 +1,170 @@
-# Root Makefile — orchestrate backend/, web/, and app/ from one place.
-# Missing stacks are skipped (or reported) so partial workspaces still work.
+# Root Makefile — marker-based orchestration for every supported stack variant.
 
 PROJECT := [[.Name]]
-
 BACKEND_DIR := backend
-WEB_DIR     := web
-APP_DIR     := app
+WEB_DIR := web
+APP_DIR := app
 
-BACKEND_MARKER := $(BACKEND_DIR)/go.mod
-WEB_MARKER     := $(WEB_DIR)/package.json
-APP_MARKER     := $(APP_DIR)/pubspec.yaml
+BACKEND_EXISTS = test -f "$(BACKEND_DIR)/go.mod" || test -f "$(BACKEND_DIR)/pyproject.toml" || test -f "$(BACKEND_DIR)/package.json" || test -f "$(BACKEND_DIR)/pom.xml"
+WEB_EXISTS = test -f "$(WEB_DIR)/package.json" || test -f "$(WEB_DIR)/angular.json"
+APP_EXISTS = test -f "$(APP_DIR)/pubspec.yaml" || test -f "$(APP_DIR)/package.json" || test -f "$(APP_DIR)/Package.swift" || test -f "$(APP_DIR)/build.gradle.kts" || test -f "$(APP_DIR)/build.gradle"
 
 .PHONY: help status setup doctor dev run build test
-.PHONY: backend.setup backend.run backend.build backend.test backend.lint backend.tidy backend.doctor
-.PHONY: web.install web.dev web.build web.preview web.doctor
-.PHONY: app.get app.run app.analyze app.test app.clean app.doctor
+.PHONY: backend.setup backend.run backend.build backend.test backend.doctor
+.PHONY: web.install web.dev web.build web.test web.doctor
+.PHONY: app.get app.run app.build app.test app.verify app.doctor
 
 help: ## Show available targets
 	@echo "Workspace: $(PROJECT)"
 	@echo ""
-	@awk 'BEGIN {FS = ":.*## "}; \
-		/^[a-zA-Z0-9_.-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' \
-		$(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo ""
-	@echo "Stacks in this workspace:"
 	@$(MAKE) -s status
 
-status: ## List which stacks exist in this workspace
-	@if [ -f "$(BACKEND_MARKER)" ]; then echo "  backend  yes  ($(BACKEND_DIR)/)"; else echo "  backend  no   (arlox add --backend)"; fi
-	@if [ -f "$(WEB_MARKER)" ]; then echo "  web      yes  ($(WEB_DIR)/)"; else echo "  web      no   (arlox add --web)"; fi
-	@if [ -f "$(APP_MARKER)" ]; then echo "  app      yes  ($(APP_DIR)/)"; else echo "  app      no   (arlox add --app)"; fi
+status: ## List installed stacks and detected marker families
+	@if [ -f "$(BACKEND_DIR)/go.mod" ]; then echo "  backend  yes  (go)"; \
+	elif [ -f "$(BACKEND_DIR)/pyproject.toml" ]; then echo "  backend  yes  (python)"; \
+	elif [ -f "$(BACKEND_DIR)/package.json" ]; then echo "  backend  yes  (node)"; \
+	elif [ -f "$(BACKEND_DIR)/pom.xml" ]; then echo "  backend  yes  (java)"; \
+	else echo "  backend  no   (arlox add --backend)"; fi
+	@if [ -f "$(WEB_DIR)/angular.json" ]; then echo "  web      yes  (angular)"; \
+	elif [ -f "$(WEB_DIR)/package.json" ]; then echo "  web      yes  (package)"; \
+	else echo "  web      no   (arlox add --web)"; fi
+	@if [ -f "$(APP_DIR)/pubspec.yaml" ]; then echo "  app      yes  (flutter)"; \
+	elif [ -f "$(APP_DIR)/package.json" ]; then echo "  app      yes  (react-pwa)"; \
+	elif [ -f "$(APP_DIR)/Package.swift" ]; then echo "  app      yes  (swift-package)"; \
+	elif [ -f "$(APP_DIR)/build.gradle.kts" ] || [ -f "$(APP_DIR)/build.gradle" ]; then echo "  app      yes  (android-gradle)"; \
+	else echo "  app      no   (arlox add --app)"; fi
 
-setup: ## One-time setup for all present stacks
-	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) backend.setup; else echo "skip backend (not in workspace)"; fi
-	@if [ -f "$(WEB_MARKER)" ]; then $(MAKE) web.install; else echo "skip web (not in workspace)"; fi
-	@if [ -f "$(APP_MARKER)" ]; then $(MAKE) app.get; else echo "skip app (not in workspace)"; fi
-	@echo "Setup complete."
+setup: ## Install dependencies for all present stacks
+	@if $(BACKEND_EXISTS); then $(MAKE) backend.setup; else echo "skip backend (not in workspace)"; fi
+	@if $(WEB_EXISTS); then $(MAKE) web.install; else echo "skip web (not in workspace)"; fi
+	@if $(APP_EXISTS); then $(MAKE) app.get; else echo "skip app (not in workspace)"; fi
 
-doctor: ## Check toolchains and health for all present stacks
-	@echo "== workspace: $(PROJECT) =="
-	@$(MAKE) -s status
-	@echo ""
-	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) backend.doctor; else echo "backend: not in workspace"; fi
-	@echo ""
-	@if [ -f "$(WEB_MARKER)" ]; then $(MAKE) web.doctor; else echo "web: not in workspace"; fi
-	@echo ""
-	@if [ -f "$(APP_MARKER)" ]; then $(MAKE) app.doctor; else echo "app: not in workspace"; fi
+run: ## Run present server stack(s), or the app when no web exists
+	@set -e; backend_pid=""; \
+	if $(BACKEND_EXISTS); then $(MAKE) backend.run & backend_pid=$$!; fi; \
+	trap 'test -z "$$backend_pid" || kill "$$backend_pid" 2>/dev/null || true' EXIT INT TERM; \
+	if $(WEB_EXISTS); then $(MAKE) web.dev; \
+	elif $(APP_EXISTS); then $(MAKE) app.run; \
+	elif [ -n "$$backend_pid" ]; then wait "$$backend_pid"; \
+	else echo "nothing to run — add a stack with: arlox add"; exit 1; fi
 
-dev: ## Start backend (background), wait until ready, then web dev server
-	@set -e; \
-	backend_pid=""; \
-	backend_port=8080; \
-	if [ -f "$(BACKEND_DIR)/configs/local/app.env" ]; then \
-		backend_port=$$(grep -E '^SERVER_PORT=' "$(BACKEND_DIR)/configs/local/app.env" | cut -d= -f2 | tr -d '[:space:]'); \
-		[ -n "$$backend_port" ] || backend_port=8080; \
-	fi; \
-	if [ -f "$(BACKEND_MARKER)" ]; then \
-		if [ ! -f "$(BACKEND_DIR)/go.sum" ]; then \
-			echo "→ backend: go mod tidy (first run)"; \
-			$(MAKE) -C $(BACKEND_DIR) tidy; \
-		fi; \
-		echo "→ backend: make run"; \
-		$(MAKE) -C $(BACKEND_DIR) run & backend_pid=$$!; \
-	fi; \
-	if [ -f "$(WEB_MARKER)" ]; then \
-		if [ -f "$(BACKEND_MARKER)" ]; then \
-			echo "→ waiting for backend http://localhost:$$backend_port/health/live ..."; \
-			ready=0; \
-			for i in $$(seq 1 60); do \
-				if curl -sf "http://localhost:$$backend_port/health/live" >/dev/null 2>&1; then \
-					ready=1; \
-					break; \
-				fi; \
-				if [ -n "$$backend_pid" ] && ! kill -0 "$$backend_pid" 2>/dev/null; then \
-					echo "error: backend exited before becoming ready — check $(BACKEND_DIR)/ logs"; \
-					exit 1; \
-				fi; \
-				sleep 1; \
-			done; \
-			if [ "$$ready" -ne 1 ]; then \
-				echo "error: backend not ready after 60s — fix backend, then retry make dev"; \
-				[ -n "$$backend_pid" ] && kill $$backend_pid 2>/dev/null || true; \
-				exit 1; \
-			fi; \
-			echo "→ backend ready"; \
-		fi; \
-		if [ ! -d "$(WEB_DIR)/node_modules" ]; then \
-			echo "→ web: npm install (first run)"; \
-			$(MAKE) web.install; \
-		fi; \
-		echo "→ web: npm run dev"; \
-		trap '[ -n "$$backend_pid" ] && kill $$backend_pid 2>/dev/null || true' EXIT INT TERM; \
-		cd $(WEB_DIR) && npm run dev; \
-	elif [ -n "$$backend_pid" ]; then \
-		echo "→ web: not in workspace — backend running (pid $$backend_pid)"; \
-		echo "  Press Ctrl+C to stop backend"; \
-		wait $$backend_pid; \
-	else \
-		echo "nothing to run — add stacks with: arlox add"; \
-		exit 1; \
-	fi
-
-run: dev ## Alias for dev (backend + web)
+dev: run ## Alias for run
 
 build: ## Build all present stacks
-	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) backend.build; else echo "skip backend (not in workspace)"; fi
-	@if [ -f "$(WEB_MARKER)" ]; then $(MAKE) web.build; else echo "skip web (not in workspace)"; fi
-	@echo "Build complete. (Flutter: use make app.run for device builds)"
+	@if $(BACKEND_EXISTS); then $(MAKE) backend.build; else echo "skip backend (not in workspace)"; fi
+	@if $(WEB_EXISTS); then $(MAKE) web.build; else echo "skip web (not in workspace)"; fi
+	@if $(APP_EXISTS); then $(MAKE) app.build; else echo "skip app (not in workspace)"; fi
 
-test: ## Run tests for all present stacks
-	@if [ -f "$(BACKEND_MARKER)" ]; then $(MAKE) backend.test; else echo "skip backend (not in workspace)"; fi
-	@if [ -f "$(WEB_MARKER)" ]; then echo "skip web (no test script in template)"; fi
-	@if [ -f "$(APP_MARKER)" ]; then $(MAKE) app.test; else echo "skip app (not in workspace)"; fi
+test: ## Test all present stacks
+	@if $(BACKEND_EXISTS); then $(MAKE) backend.test; else echo "skip backend (not in workspace)"; fi
+	@if $(WEB_EXISTS); then $(MAKE) web.test; else echo "skip web (not in workspace)"; fi
+	@if $(APP_EXISTS); then $(MAKE) app.test; else echo "skip app (not in workspace)"; fi
 
-# --- Backend (delegates to backend/Makefile) ---
+doctor: ## Check the toolchain required by each present stack
+	@if $(BACKEND_EXISTS); then $(MAKE) backend.doctor; else echo "backend: not in workspace"; fi
+	@if $(WEB_EXISTS); then $(MAKE) web.doctor; else echo "web: not in workspace"; fi
+	@if $(APP_EXISTS); then $(MAKE) app.doctor; else echo "app: not in workspace"; fi
 
-backend.setup: ## Backend: db + env setup
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
-	@$(MAKE) -C $(BACKEND_DIR) setup
+backend.setup: ## Backend: install dependencies
+	@if [ -f "$(BACKEND_DIR)/go.mod" ]; then \
+		if [ -f "$(BACKEND_DIR)/Makefile" ]; then $(MAKE) -C "$(BACKEND_DIR)" setup; else cd "$(BACKEND_DIR)" && go mod download; fi; \
+	elif [ -f "$(BACKEND_DIR)/pyproject.toml" ]; then \
+		cd "$(BACKEND_DIR)" && uv sync --extra dev; \
+	elif [ -f "$(BACKEND_DIR)/package.json" ]; then cd "$(BACKEND_DIR)" && npm install; \
+	elif [ -f "$(BACKEND_DIR)/pom.xml" ]; then cd "$(BACKEND_DIR)" && if [ -x ./mvnw ]; then ./mvnw dependency:go-offline; else mvn dependency:go-offline; fi; \
+	else echo "backend marker not found"; exit 1; fi
 
-backend.run: ## Backend: run API server
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
-	@$(MAKE) -C $(BACKEND_DIR) run
+backend.run: ## Backend: run development server
+	@if [ -f "$(BACKEND_DIR)/go.mod" ]; then \
+		if [ -f "$(BACKEND_DIR)/Makefile" ]; then $(MAKE) -C "$(BACKEND_DIR)" run; else cd "$(BACKEND_DIR)" && go run ./cmd/server; fi; \
+	elif [ -f "$(BACKEND_DIR)/pyproject.toml" ]; then cd "$(BACKEND_DIR)" && uv run uvicorn app.main:app --reload; \
+	elif [ -f "$(BACKEND_DIR)/package.json" ]; then cd "$(BACKEND_DIR)" && npm run dev; \
+	elif [ -f "$(BACKEND_DIR)/pom.xml" ]; then cd "$(BACKEND_DIR)" && if [ -x ./mvnw ]; then ./mvnw spring-boot:run; else mvn spring-boot:run; fi; \
+	else echo "backend marker not found"; exit 1; fi
 
-backend.build: ## Backend: compile server binary
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
-	@$(MAKE) -C $(BACKEND_DIR) build
+backend.build: ## Backend: build or compile
+	@if [ -f "$(BACKEND_DIR)/go.mod" ]; then \
+		if [ -f "$(BACKEND_DIR)/Makefile" ]; then $(MAKE) -C "$(BACKEND_DIR)" build; else cd "$(BACKEND_DIR)" && go build ./...; fi; \
+	elif [ -f "$(BACKEND_DIR)/pyproject.toml" ]; then cd "$(BACKEND_DIR)" && uv run python -m compileall -q app; \
+	elif [ -f "$(BACKEND_DIR)/package.json" ]; then cd "$(BACKEND_DIR)" && npm run build; \
+	elif [ -f "$(BACKEND_DIR)/pom.xml" ]; then cd "$(BACKEND_DIR)" && if [ -x ./mvnw ]; then ./mvnw -DskipTests package; else mvn -DskipTests package; fi; \
+	else echo "backend marker not found"; exit 1; fi
 
-backend.test: ## Backend: go test ./...
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
-	@$(MAKE) -C $(BACKEND_DIR) test
+backend.test: ## Backend: run unit tests
+	@if [ -f "$(BACKEND_DIR)/go.mod" ]; then cd "$(BACKEND_DIR)" && go test ./...; \
+	elif [ -f "$(BACKEND_DIR)/pyproject.toml" ]; then cd "$(BACKEND_DIR)" && uv run pytest; \
+	elif [ -f "$(BACKEND_DIR)/package.json" ]; then cd "$(BACKEND_DIR)" && npm test; \
+	elif [ -f "$(BACKEND_DIR)/pom.xml" ]; then cd "$(BACKEND_DIR)" && if [ -x ./mvnw ]; then ./mvnw test; else mvn test; fi; \
+	else echo "backend marker not found"; exit 1; fi
 
-backend.lint: ## Backend: golangci-lint
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
-	@$(MAKE) -C $(BACKEND_DIR) lint
+backend.doctor: ## Backend: report required toolchain
+	@if [ -f "$(BACKEND_DIR)/go.mod" ]; then command -v go; \
+	elif [ -f "$(BACKEND_DIR)/pyproject.toml" ]; then command -v uv; \
+	elif [ -f "$(BACKEND_DIR)/package.json" ]; then command -v node && command -v npm; \
+	elif [ -f "$(BACKEND_DIR)/pom.xml" ]; then command -v java && { [ -x "$(BACKEND_DIR)/mvnw" ] || command -v mvn; }; \
+	else echo "backend marker not found"; exit 1; fi
 
-backend.tidy: ## Backend: go mod tidy
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
-	@$(MAKE) -C $(BACKEND_DIR) tidy
+web.install: ## Web: install package dependencies
+	@$(WEB_EXISTS) || { echo "web marker not found"; exit 1; }
+	@cd "$(WEB_DIR)" && npm install
+	@if [ ! -f "$(WEB_DIR)/.env" ] && [ -f "$(WEB_DIR)/.env.example" ]; then cp "$(WEB_DIR)/.env.example" "$(WEB_DIR)/.env"; fi
 
-backend.doctor: ## Backend: env + postgres check
-	@test -f "$(BACKEND_MARKER)" || (echo "backend/ not found — run: arlox add --backend" && exit 1)
-	@$(MAKE) -C $(BACKEND_DIR) doctor
+web.dev: ## Web: run package dev script
+	@$(WEB_EXISTS) || { echo "web marker not found"; exit 1; }
+	@cd "$(WEB_DIR)" && npm run dev
 
-# --- Web (npm scripts) ---
+web.build: ## Web: run package build script
+	@$(WEB_EXISTS) || { echo "web marker not found"; exit 1; }
+	@cd "$(WEB_DIR)" && npm run build
 
-web.install: ## Web: npm install + seed .env from .env.example
-	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: arlox add --web" && exit 1)
-	@cd $(WEB_DIR) && npm install
-	@if [ ! -f "$(WEB_DIR)/.env" ] && [ -f "$(WEB_DIR)/.env.example" ]; then \
-		cp "$(WEB_DIR)/.env.example" "$(WEB_DIR)/.env"; \
-		echo "→ created $(WEB_DIR)/.env from .env.example"; \
-	fi
+web.test: ## Web: run tests when the package defines them
+	@$(WEB_EXISTS) || { echo "web marker not found"; exit 1; }
+	@cd "$(WEB_DIR)" && if npm pkg get scripts.test | grep -vq '^{}$$'; then npm test; else echo "skip web tests (no test script)"; fi
 
-web.dev: ## Web: Vite dev server
-	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: arlox add --web" && exit 1)
-	@cd $(WEB_DIR) && npm run dev
+web.doctor: ## Web: report Node toolchain
+	@$(WEB_EXISTS) || { echo "web marker not found"; exit 1; }
+	@command -v node && command -v npm
 
-web.build: ## Web: production build
-	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: arlox add --web" && exit 1)
-	@cd $(WEB_DIR) && npm run build
+app.get: ## App: install or resolve dependencies
+	@if [ -f "$(APP_DIR)/pubspec.yaml" ]; then cd "$(APP_DIR)" && flutter pub get; \
+	elif [ -f "$(APP_DIR)/package.json" ]; then cd "$(APP_DIR)" && npm install; \
+	elif [ -f "$(APP_DIR)/Package.swift" ]; then cd "$(APP_DIR)" && swift package resolve; \
+	elif [ -f "$(APP_DIR)/build.gradle.kts" ] || [ -f "$(APP_DIR)/build.gradle" ]; then cd "$(APP_DIR)" && if [ -x ./gradlew ]; then ./gradlew tasks >/dev/null; else gradle tasks >/dev/null; fi; \
+	else echo "app marker not found"; exit 1; fi
 
-web.preview: ## Web: preview production build
-	@test -f "$(WEB_MARKER)" || (echo "web/ not found — run: arlox add --web" && exit 1)
-	@cd $(WEB_DIR) && npm run preview
+app.run: ## App: run interactively
+	@if [ -f "$(APP_DIR)/pubspec.yaml" ]; then cd "$(APP_DIR)" && flutter run; \
+	elif [ -f "$(APP_DIR)/package.json" ]; then cd "$(APP_DIR)" && npm run dev; \
+	elif [ -f "$(APP_DIR)/Package.swift" ]; then cd "$(APP_DIR)" && swift run; \
+	elif [ -f "$(APP_DIR)/build.gradle.kts" ] || [ -f "$(APP_DIR)/build.gradle" ]; then cd "$(APP_DIR)" && if [ -x ./gradlew ]; then ./gradlew installDebug; else gradle installDebug; fi; \
+	else echo "app marker not found"; exit 1; fi
 
-web.doctor: ## Web: node/npm + deps check
-	@echo "== web =="
-	@command -v node >/dev/null 2>&1 && echo "OK  node $$(node -v)" || (echo "FAIL node not found" && exit 1)
-	@command -v npm >/dev/null 2>&1 && echo "OK  npm $$(npm -v)" || (echo "FAIL npm not found" && exit 1)
-	@test -f "$(WEB_MARKER)" && echo "OK  $(WEB_MARKER)" || (echo "FAIL $(WEB_MARKER) missing" && exit 1)
-	@if [ -d "$(WEB_DIR)/node_modules" ]; then echo "OK  node_modules"; else echo "WARN node_modules missing — run: make web.install"; fi
+app.build: ## App: build the installed variant
+	@if [ -f "$(APP_DIR)/pubspec.yaml" ]; then cd "$(APP_DIR)" && flutter build web; \
+	elif [ -f "$(APP_DIR)/package.json" ]; then cd "$(APP_DIR)" && npm run build; \
+	elif [ -f "$(APP_DIR)/Package.swift" ]; then cd "$(APP_DIR)" && swift build; \
+	elif [ -f "$(APP_DIR)/build.gradle.kts" ] || [ -f "$(APP_DIR)/build.gradle" ]; then cd "$(APP_DIR)" && if [ -x ./gradlew ]; then ./gradlew assembleDebug; else gradle assembleDebug; fi; \
+	else echo "app marker not found"; exit 1; fi
 
-# --- App (Flutter) ---
+app.test: ## App: run unit tests
+	@if [ -f "$(APP_DIR)/pubspec.yaml" ]; then cd "$(APP_DIR)" && flutter test; \
+	elif [ -f "$(APP_DIR)/package.json" ]; then cd "$(APP_DIR)" && npm test; \
+	elif [ -f "$(APP_DIR)/Package.swift" ]; then cd "$(APP_DIR)" && swift test; \
+	elif [ -f "$(APP_DIR)/build.gradle.kts" ] || [ -f "$(APP_DIR)/build.gradle" ]; then cd "$(APP_DIR)" && if [ -x ./gradlew ]; then ./gradlew test; else gradle test; fi; \
+	else echo "app marker not found"; exit 1; fi
 
-app.get: ## App: flutter pub get
-	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: arlox add --app" && exit 1)
-	@cd $(APP_DIR) && flutter pub get
+app.verify: ## App: standardized static checks and tests
+	@if [ -f "$(APP_DIR)/pubspec.yaml" ]; then cd "$(APP_DIR)" && flutter analyze && flutter test; \
+	elif [ -f "$(APP_DIR)/package.json" ]; then cd "$(APP_DIR)" && npm test && npm run build; \
+	elif [ -f "$(APP_DIR)/Package.swift" ]; then cd "$(APP_DIR)" && swift build && swift test; \
+	elif [ -f "$(APP_DIR)/build.gradle.kts" ] || [ -f "$(APP_DIR)/build.gradle" ]; then cd "$(APP_DIR)" && if [ -x ./gradlew ]; then ./gradlew test lint assembleDebug; else gradle test lint assembleDebug; fi; \
+	else echo "app marker not found"; exit 1; fi
 
-app.run: ## App: flutter run (interactive — use its own terminal)
-	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: arlox add --app" && exit 1)
-	@cd $(APP_DIR) && flutter run
-
-app.analyze: ## App: flutter analyze
-	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: arlox add --app" && exit 1)
-	@cd $(APP_DIR) && flutter analyze
-
-app.test: ## App: flutter test
-	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: arlox add --app" && exit 1)
-	@cd $(APP_DIR) && flutter test
-
-app.clean: ## App: flutter clean
-	@test -f "$(APP_MARKER)" || (echo "app/ not found — run: arlox add --app" && exit 1)
-	@cd $(APP_DIR) && flutter clean
-
-app.doctor: ## App: flutter toolchain check
-	@echo "== app =="
-	@command -v flutter >/dev/null 2>&1 && echo "OK  flutter $$(flutter --version | head -1)" || (echo "FAIL flutter not found" && exit 1)
-	@test -f "$(APP_MARKER)" && echo "OK  $(APP_MARKER)" || (echo "FAIL $(APP_MARKER) missing" && exit 1)
+app.doctor: ## App: report required toolchain
+	@if [ -f "$(APP_DIR)/pubspec.yaml" ]; then command -v flutter; \
+	elif [ -f "$(APP_DIR)/package.json" ]; then command -v node && command -v npm; \
+	elif [ -f "$(APP_DIR)/Package.swift" ]; then command -v swift; \
+	elif [ -f "$(APP_DIR)/build.gradle.kts" ] || [ -f "$(APP_DIR)/build.gradle" ]; then [ -x "$(APP_DIR)/gradlew" ] || command -v gradle; \
+	else echo "app marker not found"; exit 1; fi

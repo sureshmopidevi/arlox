@@ -1,0 +1,15 @@
+---
+description: SwiftUI MVVM and repository conventions
+globs:
+  - "**/*.swift"
+---
+
+# Architecture
+
+- Views render state and forward user intent; no networking in a `View`.
+- `@MainActor` view models own presentation state.
+- Repository protocols describe feature data needs; implementations own I/O.
+- Inject repositories through initializers so view models are testable.
+- Prefer value types and structured concurrency.
+- Keep feature code in `AppFeature`; the `App` target is the composition root.
+- Do not add a protocol unless it is a real boundary or enables a focused test.

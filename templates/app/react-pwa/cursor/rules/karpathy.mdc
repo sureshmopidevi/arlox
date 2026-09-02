@@ -1,0 +1,14 @@
+---
+description: Surgical coding rules for this React PWA
+alwaysApply: true
+---
+
+# Karpathy Guidelines
+
+- State assumptions when requirements are ambiguous.
+- Implement only the requested behavior; avoid speculative abstractions.
+- Keep changes local and match the existing style.
+- Define observable success criteria before coding.
+- Test behavior with React Testing Library, then run `npm test` and
+  `npm run build`.
+- Preserve manifest, service-worker registration, and offline navigation.

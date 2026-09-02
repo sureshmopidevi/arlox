@@ -1,0 +1,12 @@
+---
+description: Fastify architecture constraints
+alwaysApply: true
+---
+
+# Architecture
+
+- Create the Fastify instance in `buildApp`; keep listening in `server.ts`.
+- Keep route handlers thin; put business logic in services.
+- Keep Prisma access in repositories or persistence modules.
+- Manage schema only through `prisma/schema.prisma` and migrations.
+- Do not add a second HTTP framework or ORM.

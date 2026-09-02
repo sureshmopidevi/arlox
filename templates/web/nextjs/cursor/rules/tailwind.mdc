@@ -1,0 +1,14 @@
+---
+description: Tailwind CSS styling conventions
+globs:
+  - "app/**/*.{ts,tsx,css}"
+  - "components/**/*.{ts,tsx}"
+---
+
+# Tailwind
+
+- Use Tailwind utilities for component styling.
+- Keep the Tailwind v4 import in `app/globals.css`.
+- Prefer semantic HTML, responsive utilities, and visible focus states.
+- Extract a component only when UI or behavior is genuinely reused.
+- Avoid arbitrary values when a stock utility expresses the design.

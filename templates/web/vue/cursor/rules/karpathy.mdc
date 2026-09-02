@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+---
+
+# Karpathy Guidelines
+
+- State assumptions and success criteria before changing code.
+- Prefer the smallest implementation that satisfies the request.
+- Use Vue's built-in reactivity before adding state dependencies.
+- Touch only relevant files and preserve established conventions.
+- Verify with `npm test` and `npm run build`.

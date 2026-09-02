@@ -1,0 +1,9 @@
+import { mount } from "@vue/test-utils"
+import { describe, expect, it } from "vitest"
+import App from "./App.vue"
+
+describe("App", () => {
+  it("shows the application name", () => {
+    expect(mount(App).get("h1").text()).toBe("[[.DisplayName]]")
+  })
+})

@@ -28,8 +28,12 @@ func buildRoot() *cobra.Command {
 	create := &cobra.Command{
 		Use:   "create [name]",
 		Short: "Create a new arlox workspace",
-		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var err error
+			args, err = resolveVariantArgs(args, &f, true)
+			if err != nil {
+				return err
+			}
 			return runCreate(args, f)
 		},
 	}
@@ -68,14 +72,32 @@ func versionCmd() *cobra.Command {
 }
 
 type stackFlags struct {
-	backend bool
-	web     bool
-	app     bool
+	backend workspace.Variant
+	web     workspace.Variant
+	app     workspace.Variant
 	open    bool
 	module  string
 	org     string
 	out     string
 }
+
+type variantFlag struct {
+	value *workspace.Variant
+}
+
+func (f variantFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return string(*f.value)
+}
+
+func (f variantFlag) Set(value string) error {
+	*f.value = workspace.Variant(value)
+	return nil
+}
+
+func (variantFlag) Type() string { return "variant" }
 
 func bindStackFlags(cmd *cobra.Command, f *stackFlags) {
 	bindAddFlags(cmd, f)
@@ -86,24 +108,77 @@ func bindStackFlags(cmd *cobra.Command, f *stackFlags) {
 
 // bindAddFlags binds only the flags relevant to the add subcommand.
 func bindAddFlags(cmd *cobra.Command, f *stackFlags) {
-	cmd.Flags().BoolVar(&f.backend, "backend", false, "include backend (Go) stack")
-	cmd.Flags().BoolVar(&f.web, "web", false, "include web (React/TS) stack")
-	cmd.Flags().BoolVar(&f.app, "app", false, "include app (Flutter) stack")
+	cmd.Flags().Var(variantFlag{value: &f.backend}, "backend", "include backend stack (go, python, node-express, node-fastify, java)")
+	cmd.Flags().Var(variantFlag{value: &f.web}, "web", "include web stack (react-vite, nextjs, vue, svelte, angular, nuxt)")
+	cmd.Flags().Var(variantFlag{value: &f.app}, "app", "include app stack (flutter, react-pwa, ios, android)")
+	cmd.Flags().Lookup("backend").NoOptDefVal = string(workspace.GoGin)
+	cmd.Flags().Lookup("web").NoOptDefVal = string(workspace.ReactVite)
+	cmd.Flags().Lookup("app").NoOptDefVal = string(workspace.Flutter)
 	cmd.Flags().BoolVar(&f.open, "open", false, "open workspace in Cursor, VS Code, or Antigravity IDE after creation")
 }
 
-func selectedStacks(f stackFlags) []workspace.Stack {
-	var stacks []workspace.Stack
-	if f.backend {
-		stacks = append(stacks, workspace.Backend)
+type stackSelection struct {
+	stack   workspace.Stack
+	variant workspace.Variant
+}
+
+func selectedVariantsFromFlags(f stackFlags) []stackSelection {
+	var selections []stackSelection
+	if f.backend != "" {
+		selections = append(selections, stackSelection{workspace.Backend, f.backend})
 	}
-	if f.web {
-		stacks = append(stacks, workspace.Web)
+	if f.web != "" {
+		selections = append(selections, stackSelection{workspace.Web, f.web})
 	}
-	if f.app {
-		stacks = append(stacks, workspace.App)
+	if f.app != "" {
+		selections = append(selections, stackSelection{workspace.App, f.app})
 	}
-	return stacks
+	return selections
+}
+
+func validateSelections(selections []stackSelection) error {
+	for _, selection := range selections {
+		if !workspace.ValidVariant(selection.stack, selection.variant) {
+			return fmt.Errorf("invalid --%s variant %q", selection.stack, selection.variant)
+		}
+	}
+	return nil
+}
+
+// resolveVariantArgs handles Cobra's optional-value flag behavior. With
+// NoOptDefVal set for legacy bare flags, pflag leaves a space-separated value
+// in the positional arguments; move recognized values back to their flag.
+func resolveVariantArgs(args []string, f *stackFlags, hasName bool) ([]string, error) {
+	keep := 0
+	if hasName && len(args) > 0 {
+		keep = 1
+	}
+	positional := append([]string(nil), args[:keep]...)
+	for _, arg := range args[keep:] {
+		var target *workspace.Variant
+		for _, candidate := range []struct {
+			stack workspace.Stack
+			value *workspace.Variant
+		}{
+			{workspace.Backend, &f.backend},
+			{workspace.Web, &f.web},
+			{workspace.App, &f.app},
+		} {
+			if *candidate.value == workspace.DefaultVariant(candidate.stack) &&
+				workspace.ValidVariant(candidate.stack, workspace.Variant(arg)) {
+				target = candidate.value
+				break
+			}
+		}
+		if target == nil {
+			return nil, fmt.Errorf("unexpected argument %q (variant values must follow a matching stack flag)", arg)
+		}
+		*target = workspace.Variant(arg)
+	}
+	if len(positional) > 1 {
+		return nil, fmt.Errorf("accepts at most 1 arg, received %d", len(positional))
+	}
+	return positional, nil
 }
 
 func buildData(name string, f stackFlags) generate.Data {
@@ -113,7 +188,7 @@ func buildData(name string, f stackFlags) generate.Data {
 	}
 	// Flutter package names must be snake_case (no hyphens); match project name like web's package.json.
 	pkg := strings.ReplaceAll(name, "-", "_")
-	return generate.Data{
+	data := generate.Data{
 		Name:         name,
 		DisplayName:  toDisplayName(name),
 		Module:       module,
@@ -122,6 +197,10 @@ func buildData(name string, f stackFlags) generate.Data {
 		APIURL:       "http://localhost:8080/api/v1",
 		ArloxVersion: version.Version,
 	}
+	if selected := selectedVariantsFromFlags(f); len(selected) > 0 {
+		data.Variant = selected[0].variant
+	}
+	return data
 }
 
 func toDisplayName(name string) string {
@@ -181,6 +260,65 @@ func promptStacks(available []workspace.Stack) ([]workspace.Stack, error) {
 	return stacks, nil
 }
 
+func promptVariant(stack workspace.Stack) (workspace.Variant, error) {
+	if stack == workspace.App {
+		var target string
+		if err := huh.NewForm(huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Which app target?").
+				Options(
+					huh.NewOption("Flutter", string(workspace.Flutter)),
+					huh.NewOption("React PWA", string(workspace.ReactPWA)),
+					huh.NewOption("Native", "native"),
+				).
+				Value(&target),
+		)).Run(); err != nil {
+			return "", err
+		}
+		if target != "native" {
+			return workspace.Variant(target), nil
+		}
+
+		var native workspace.Variant
+		err := huh.NewForm(huh.NewGroup(
+			huh.NewSelect[workspace.Variant]().
+				Title("Which native platform?").
+				Options(
+					huh.NewOption("iOS (SwiftUI)", workspace.NativeIOS),
+					huh.NewOption("Android (Kotlin + Compose)", workspace.NativeAndroid),
+				).
+				Value(&native),
+		)).Run()
+		return native, err
+	}
+
+	labels := map[workspace.Variant]string{
+		workspace.GoGin:       "Go + Gin",
+		workspace.PyFastAPI:   "Python + FastAPI",
+		workspace.NodeExpress: "Node.js + Express",
+		workspace.NodeFastify: "Node.js + Fastify",
+		workspace.JavaSpring:  "Java + Spring Boot",
+		workspace.ReactVite:   "React + Vite",
+		workspace.NextJS:      "Next.js",
+		workspace.VueVite:     "Vue + Vite",
+		workspace.SvelteVite:  "Svelte + Vite",
+		workspace.Angular:     "Angular",
+		workspace.Nuxt:        "Nuxt",
+	}
+	options := make([]huh.Option[workspace.Variant], 0, len(workspace.VariantsForStack(stack)))
+	for _, variant := range workspace.VariantsForStack(stack) {
+		options = append(options, huh.NewOption(labels[variant], variant))
+	}
+	var selected workspace.Variant
+	err := huh.NewForm(huh.NewGroup(
+		huh.NewSelect[workspace.Variant]().
+			Title(fmt.Sprintf("Which %s framework?", stack)).
+			Options(options...).
+			Value(&selected),
+	)).Run()
+	return selected, err
+}
+
 type stackResult struct {
 	created  []string
 	warnings map[string]string
@@ -188,11 +326,12 @@ type stackResult struct {
 	failed   []string
 }
 
-func executeStacks(root string, stacks []workspace.Stack, data generate.Data) stackResult {
+func executeStacks(root string, selections []stackSelection, data generate.Data) stackResult {
 	r := stackResult{
 		warnings: make(map[string]string),
 	}
-	for _, s := range stacks {
+	for _, selection := range selections {
+		s := selection.stack
 		if workspace.StackExists(root, s) {
 			ui.Progress(string(s), "skipped")
 			r.skipped = append(r.skipped, string(s))
@@ -205,7 +344,7 @@ func executeStacks(root string, stacks []workspace.Stack, data generate.Data) st
 			continue
 		}
 		ui.Progress(string(s), "generating")
-		warn, err := generate.Stack(root, s, data)
+		warn, err := generate.Stack(root, s, selection.variant, data)
 		if err != nil {
 			ui.Progress(string(s), "failed")
 			ui.Error(err.Error())
@@ -275,10 +414,13 @@ func runGenerate(root, name string, f stackFlags, opts generateOpts) error {
 	data := buildData(name, f)
 	missing := workspace.ListMissingStacks(root)
 
-	stacks := selectedStacks(f)
-	if len(stacks) == 0 {
+	selections := selectedVariantsFromFlags(f)
+	if err := validateSelections(selections); err != nil {
+		return err
+	}
+	if len(selections) == 0 {
 		var err error
-		stacks, err = promptStacks(missing)
+		stacks, err := promptStacks(missing)
 		if err != nil {
 			return err
 		}
@@ -293,9 +435,16 @@ func runGenerate(root, name string, f stackFlags, opts generateOpts) error {
 			ui.Dim("nothing selected — workspace folder is ready for arlox add")
 			return nil
 		}
+		for _, stack := range stacks {
+			variant, err := promptVariant(stack)
+			if err != nil {
+				return err
+			}
+			selections = append(selections, stackSelection{stack: stack, variant: variant})
+		}
 	}
 
-	result := executeStacks(root, stacks, data)
+	result := executeStacks(root, selections, data)
 
 	wsFile := workspace.FindWorkspaceFile(root)
 	if wsFile != "" {
@@ -394,6 +543,13 @@ func addCmd() *cobra.Command {
 		Use:   "add",
 		Short: "Add stacks to an existing workspace",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			remaining, err := resolveVariantArgs(args, &f, false)
+			if err != nil {
+				return err
+			}
+			if len(remaining) > 0 {
+				return fmt.Errorf("add accepts no arguments")
+			}
 			cwd, err := os.Getwd()
 			if err != nil {
 				return err
@@ -467,4 +623,3 @@ func skillsCmd() *cobra.Command {
 	cmd.AddCommand(update)
 	return cmd
 }
-

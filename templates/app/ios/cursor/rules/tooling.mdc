@@ -1,0 +1,14 @@
+---
+description: Swift and Xcode tooling requirements
+globs:
+  - "**/*.{swift,swiftpm}"
+---
+
+# Tooling
+
+- Use Swift Package Manager for dependencies and unit tests.
+- Run `swift test` before finishing.
+- Treat `swift run` as the macOS host check, not iOS distribution validation.
+- Use Xcode for simulator/device runs, signing, capabilities, assets, previews,
+  and archives.
+- Keep generated Xcode user data and `.build` out of version control.

@@ -1,98 +1,107 @@
-# arlox v1 verification
+# arlox verification
 
-## Automated (recommended)
+## Automated
 
-From the repo root — exports `$(go env GOPATH)/bin` if needed:
+From the repository root:
 
 ```bash
 make verify
 ```
 
-Or run the script directly:
+Or:
 
 ```bash
 source scripts/env.sh && ensure_arlox_path && ensure_local_tool_paths
 ./scripts/verify.sh
 ```
 
-## Manual
+The smoke test skips variants whose required toolchain is unavailable.
 
-Run from a throwaway directory (not inside the arlox repo).
+## Manual setup
+
+Use a throwaway directory outside this repository:
 
 ```bash
 export PATH="$(go env GOPATH)/bin:$PATH"
-# or: eval $(make -C ~/arlox path)
 cd /tmp
-rm -rf arlox-demo arlox-demo2
+rm -rf arlox-demo-*
 ```
 
-## 1. Create all stacks
+For each generated stack, confirm:
+
+1. Its marker file exists.
+2. `.origin-manifest.json` contains the requested `stack` and `variant`.
+3. Technology-specific `.cursor/rules` and `.cursor/skills` exist.
+4. The variant test command succeeds.
+
+## Backward-compatible defaults
 
 ```bash
-arlox create arlox-demo --backend --web --app
+arlox create arlox-demo-defaults --backend --web --app
 ```
 
-Expect: `backend/`, `web/`, `app/`, `arlox-demo.code-workspace`, `.cursor/skills/add-feature-fullstack`.
+Expect `go`, `react-vite`, and `flutter` manifests in `backend/`, `web/`, and
+`app/`. Re-running the command must skip existing stacks.
 
-## 2. No duplicates
+## Explicit variants
+
+Generate one variant at a time with:
 
 ```bash
-arlox create arlox-demo --backend --web --app
+arlox create arlox-demo-<variant> --backend <variant>
+arlox create arlox-demo-<variant> --web <variant>
+arlox create arlox-demo-<variant> --app <variant>
 ```
 
-Expect: all stacks **skipped (already exists)**.
+Run the matching check when its prerequisites are installed:
 
-## 3. Add after partial create
+- Backend:
+  - `go`: `go test ./...`
+  - `python`: `pytest`
+  - `node-express`, `node-fastify`: `npm test`
+  - `java`: `mvn test`
+- Web:
+  - `react-vite`: `npm run build`
+  - `nextjs`, `vue`, `svelte`, `nuxt`: `npm test`
+  - `angular`: `ng test --watch=false`
+- App:
+  - `flutter`: `flutter test`
+  - `react-pwa`: `npm test`
+  - `ios`: `xcodebuild test` (macOS/Xcode only)
+  - `android`: `gradle test` (requires JDK, Gradle, and Android SDK)
+
+Toolchains are listed in [the workspace guide](../docs/workspace-guide.md).
+
+## Interactive flow
+
+Run `arlox create` in a TTY and verify prompts are sequential:
+
+1. Project name.
+2. Stack multi-select.
+3. One backend choice, if selected.
+4. One web choice, if selected.
+5. App choice: Flutter, React PWA, or Native.
+6. Native platform: iOS or Android, only after choosing Native.
+
+## Add and guardrails
 
 ```bash
-arlox create arlox-demo2 --backend
-cd arlox-demo2
-arlox add --web
+arlox create arlox-demo-add --backend python
+cd arlox-demo-add
+arlox add --web vue
 ```
 
-Expect: web generated; backend skipped; workspace folders include both.
+Expect both folders in the workspace file and no backend replacement. Confirm
+the root full-stack skill and each variant's architecture, tooling,
+`dev-workflow`, `add-feature-*`, `learn`, and `apply-pending` assets.
 
-## 4. Backend health (needs local Postgres)
+Finally, add a learned entry and run `arlox skills update`; the learned file
+must remain unchanged.
+
+## Output guardrail
 
 ```bash
-cd /tmp/arlox-demo/backend
-make setup
-make run   # in another terminal: curl -s localhost:8080/health/live
+NO_COLOR=1 arlox create arlox-demo-nocolor --backend
 ```
 
-## 5. Web build
-
-```bash
-cd /tmp/arlox-demo/web
-npm install && npm run build
-```
-
-## 6. Flutter analyze
-
-```bash
-cd /tmp/arlox-demo/app
-flutter pub get && flutter analyze
-```
-
-## 7. Guardrails present
-
-```bash
-test -f /tmp/arlox-demo/.cursor/skills/add-feature-fullstack/SKILL.md
-test -f /tmp/arlox-demo/backend/.cursor/rules/karpathy.mdc
-test -f /tmp/arlox-demo/web/.cursor/rules/tailwind.mdc
-test -f /tmp/arlox-demo/app/.cursor/skills/add-feature-mobile/learned/README.md
-```
-
-## 8. NO_COLOR
-
-```bash
-NO_COLOR=1 arlox create arlox-nocolor --backend
-```
-
-Expect: same layout, no ANSI escapes.
-
-## 9–11. Skills (manual / agent)
-
-- Add a feature via backend `add-feature-backend` skill → `learned/<feature>.md` appears
-- Full-stack feature → sequential backend → web → app
-- `arlox skills update` leaves `learned/` untouched
+Expect the normal Go backend layout with no ANSI escapes.

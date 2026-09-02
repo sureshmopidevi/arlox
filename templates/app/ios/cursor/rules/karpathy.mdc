@@ -1,0 +1,13 @@
+---
+description: Surgical coding rules for this SwiftUI project
+alwaysApply: true
+---
+
+# Karpathy Guidelines
+
+- State assumptions where iOS and SwiftPM behavior differ.
+- Implement the minimum requested behavior and avoid premature protocols.
+- Keep edits local and preserve Swift concurrency isolation.
+- Define behavior with XCTest before or alongside implementation.
+- Run `swift test`; use Xcode checks when work touches signing, capabilities,
+  assets, previews, or an iOS application target.

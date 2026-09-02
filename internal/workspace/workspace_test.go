@@ -52,7 +52,7 @@ func TestSyncWorkspaceFolders(t *testing.T) {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		marker := stackMarkers[Stack(stack)]
+		marker := stackMarkerCandidates[Stack(stack)][0]
 		if err := os.WriteFile(filepath.Join(dir, marker), []byte("ok"), 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -144,5 +144,80 @@ func TestFindWorkspaceFilePrefersMatchingName(t *testing.T) {
 	got := FindWorkspaceFile(root)
 	if got != preferred {
 		t.Fatalf("FindWorkspaceFile: got %q, want %q", got, preferred)
+	}
+}
+
+func TestVariantConstants(t *testing.T) {
+	all := append(append(append([]Variant{}, BackendVariants...), WebVariants...), AppVariants...)
+	seen := make(map[Variant]bool, len(all))
+	for _, variant := range all {
+		if variant == "" {
+			t.Fatal("variant constants must not be empty")
+		}
+		if seen[variant] {
+			t.Fatalf("variant %q appears more than once", variant)
+		}
+		seen[variant] = true
+	}
+	if len(all) != 15 {
+		t.Fatalf("expected 15 variants, got %d", len(all))
+	}
+}
+
+func TestVariantsByStack(t *testing.T) {
+	tests := map[Stack][]Variant{
+		Backend: {GoGin, PyFastAPI, NodeExpress, NodeFastify, JavaSpring},
+		Web:     {ReactVite, NextJS, VueVite, SvelteVite, Angular, Nuxt},
+		App:     {Flutter, ReactPWA, NativeIOS, NativeAndroid},
+	}
+	for stack, want := range tests {
+		got := VariantsForStack(stack)
+		if len(got) != len(want) {
+			t.Fatalf("%s: got %d variants, want %d", stack, len(got), len(want))
+		}
+		for i := range want {
+			if got[i] != want[i] {
+				t.Errorf("%s variant %d = %q, want %q", stack, i, got[i], want[i])
+			}
+		}
+	}
+}
+
+func TestStackExistsMultiMarker(t *testing.T) {
+	for stack, markers := range stackMarkerCandidates {
+		for _, marker := range markers {
+			t.Run(string(stack)+"/"+marker, func(t *testing.T) {
+				root := t.TempDir()
+				dir := filepath.Join(root, string(stack))
+				if err := os.MkdirAll(dir, 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(dir, marker), nil, 0o644); err != nil {
+					t.Fatal(err)
+				}
+				if !StackExists(root, stack) {
+					t.Fatalf("StackExists(%s) = false with marker %s", stack, marker)
+				}
+			})
+		}
+	}
+}
+
+func TestDetectVariant(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, string(Backend))
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	manifest := []byte(`{"stack":"backend","variant":"python"}`)
+	if err := os.WriteFile(filepath.Join(dir, ".origin-manifest.json"), manifest, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, ok := DetectVariant(root, Backend)
+	if !ok || got != PyFastAPI {
+		t.Fatalf("DetectVariant() = (%q, %v), want (%q, true)", got, ok, PyFastAPI)
+	}
+	if _, ok := DetectVariant(root, Web); ok {
+		t.Fatal("expected no web variant")
 	}
 }

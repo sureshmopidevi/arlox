@@ -1,0 +1,18 @@
+---
+description: Android MVVM, repository, Compose, and Hilt conventions
+globs:
+  - "**/*.kt"
+---
+
+# Architecture
+
+- Compose functions render immutable UI state and emit user actions.
+- ViewModels coordinate use cases/repositories and expose UI state.
+- Repository interfaces belong in framework-free code; implementations own I/O.
+- Use constructor injection and Hilt bindings for repository implementations.
+- Keep Android APIs in the UI/application layer; domain contracts stay
+  framework-free.
+- Use Kotlin coroutines and Flow for asynchronous state and Retrofit/OkHttp for
+  network boundaries.
+- Features must not reach into another feature's presentation layer.
+- Add an abstraction only for a real boundary or focused test seam.

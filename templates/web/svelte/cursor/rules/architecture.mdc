@@ -1,0 +1,14 @@
+---
+description: Svelte application architecture
+globs:
+  - "src/**/*.{ts,svelte}"
+---
+
+# Architecture
+
+- Use Svelte 5 syntax and TypeScript in component scripts.
+- Put reusable UI in `src/components/` and feature code in `src/features/<name>/`.
+- Keep components declarative; move reusable state and effects into `.svelte.ts` modules.
+- Keep HTTP and persistence behind typed modules.
+- Prefer props, snippets, and callbacks over implicit cross-component state.
+- Keep tests beside the behavior they cover.

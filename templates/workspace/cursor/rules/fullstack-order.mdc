@@ -11,18 +11,19 @@ When a feature spans stacks, implement **one stack at a time** in this order. Ne
 
 1. **Backend** (if `backend/` exists)
    - Define and implement API
-   - Verify: `make test`
+   - Verify from workspace root: `make backend.test`
    - Write contract: `backend/.cursor/skills/add-feature-backend/learned/<feature>.md`
 
 2. **Web** (if `web/` exists) — **mandatory when the folder exists**
    - Consume the backend contract (do not invent endpoints)
-   - Feature folder + page + route + sidebar
-   - Verify: `npm run build`
+   - Follow the installed variant's architecture and add-feature skill
+   - Verify from workspace root: `make web.build`
    - Do not call the feature done after backend only
 
 3. **App** (if `app/` exists)
    - Consume the same backend contract
-   - Verify: `flutter analyze`
+   - Follow the installed variant's architecture and add-feature skill
+   - Verify from workspace root: `make app.verify`
 
 ## Rules
 

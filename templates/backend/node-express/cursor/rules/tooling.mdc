@@ -1,0 +1,11 @@
+---
+description: Node and Prisma development tooling
+alwaysApply: true
+---
+
+# Tooling
+
+- Use `npm run dev` for development and `npm run build` for compilation.
+- Run tests with `npm test`.
+- Run `npm run db:generate` after Prisma schema changes.
+- Create local migrations with `npm run db:migrate`.

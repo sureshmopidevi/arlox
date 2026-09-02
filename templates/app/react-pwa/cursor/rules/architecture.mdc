@@ -1,0 +1,17 @@
+---
+description: React PWA architecture conventions
+globs:
+  - "src/**/*.{ts,tsx}"
+---
+
+# Architecture
+
+- Put vertical slices in `src/features/<name>/`.
+- Keep pages and `App` thin; UI components consume feature hooks.
+- Keep network access in `src/features/<name>/api/` and read API configuration
+  from `import.meta.env`, never from hard-coded production URLs.
+- Keep domain types beside their feature and avoid feature-to-feature imports.
+- Register the service worker only in `src/main.tsx`.
+- Treat offline behavior as a product contract: cache application-shell assets,
+  but do not cache authenticated API responses unless explicitly designed.
+- Use semantic HTML and test user-visible behavior.

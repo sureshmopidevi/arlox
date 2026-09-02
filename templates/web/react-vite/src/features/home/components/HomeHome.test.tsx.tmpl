@@ -1,0 +1,22 @@
+import '@testing-library/jest-dom/vitest'
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { HomeHome } from './HomeHome'
+
+vi.mock('@/hooks/useDocumentTitle', () => ({
+  useDocumentTitle: () => {},
+}))
+
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: (selector: (state: { user: null }) => unknown) =>
+    selector({ user: null }),
+}))
+
+describe('HomeHome', () => {
+  it('shows the application name', () => {
+    render(<HomeHome />)
+    expect(
+      screen.getByRole('heading', { name: /Welcome to [[.DisplayName]]/ }),
+    ).toBeInTheDocument()
+  })
+})

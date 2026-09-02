@@ -1,0 +1,75 @@
+package [[.Org]].[[.Package]]
+
+import android.app.Application
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import dagger.Binds
+import dagger.Module
+import dagger.hilt.InstallIn
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.HiltAndroidApp
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Inject
+
+@HiltAndroidApp
+class ArloxApplication : Application()
+
+interface GreetingRepository {
+    fun greeting(): String
+}
+
+class DefaultGreetingRepository @Inject constructor() : GreetingRepository {
+    override fun greeting() = "[[.DisplayName]] is ready"
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class AppModule {
+    @Binds
+    abstract fun bindGreetingRepository(repository: DefaultGreetingRepository): GreetingRepository
+}
+
+data class HomeState(val greeting: String = "")
+
+@HiltViewModel
+class HomeViewModel @Inject constructor(repository: GreetingRepository) : ViewModel() {
+    var state = androidx.compose.runtime.mutableStateOf(HomeState(repository.greeting()))
+        private set
+}
+
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MaterialTheme {
+                HomeScreen()
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
+    val state by viewModel.state
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(state.greeting)
+    }
+}

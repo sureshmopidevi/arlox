@@ -1,0 +1,14 @@
+---
+description: Angular coding and tooling conventions
+globs:
+  - "src/**/*.{ts,html,css}"
+---
+
+# Angular
+
+- Use modern template control flow (`@if`, `@for`) and standalone imports.
+- Prefer `inject()` and signals for concise, typed component code.
+- Keep `ChangeDetectionStrategy.OnPush` on application components.
+- Use Angular CLI scripts for serve, test, and build.
+- Preserve accessibility with semantic HTML, labels, keyboard support, and visible focus.
+- Avoid NgModules and manual change detection unless integration constraints require them.

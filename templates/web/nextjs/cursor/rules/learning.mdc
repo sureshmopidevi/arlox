@@ -1,0 +1,9 @@
+---
+description: Project learning capture
+---
+
+# Learning
+
+Before feature work, read `.cursor/skills/add-feature-web/learned/README.md`.
+After non-obvious feature or debugging work, run the learn skill and record reusable decisions,
+files affected, and pitfalls. Keep lessons concrete and specific to this Next.js application.

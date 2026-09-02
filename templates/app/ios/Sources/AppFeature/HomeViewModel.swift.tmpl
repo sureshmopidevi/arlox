@@ -1,0 +1,28 @@
+import Combine
+import Foundation
+
+public protocol GreetingRepository: Sendable {
+    func greeting() async -> String
+}
+
+public struct LocalGreetingRepository: GreetingRepository {
+    public init() {}
+
+    public func greeting() async -> String {
+        "Welcome to [[.DisplayName]]"
+    }
+}
+
+@MainActor
+public final class HomeViewModel: ObservableObject {
+    @Published public private(set) var greeting = ""
+    private let repository: any GreetingRepository
+
+    public init(repository: any GreetingRepository = LocalGreetingRepository()) {
+        self.repository = repository
+    }
+
+    public func load() async {
+        greeting = await repository.greeting()
+    }
+}

@@ -1,0 +1,11 @@
+import { TestBed } from "@angular/core/testing"
+import { describe, expect, it } from "vitest"
+import { App } from "./app"
+
+describe("App", () => {
+  it("shows the application name", async () => {
+    await TestBed.configureTestingModule({ imports: [App] }).compileComponents()
+    const element = TestBed.createComponent(App).nativeElement as HTMLElement
+    expect(element.querySelector("h1")?.textContent).toContain("[[.DisplayName]]")
+  })
+})

@@ -1,0 +1,12 @@
+---
+description: Surgical coding rules for this native Android app
+alwaysApply: true
+---
+
+# Karpathy Guidelines
+
+- Implement only requested behavior; avoid speculative layers and base classes.
+- Keep domain contracts free of Android framework dependencies.
+- Define behavior with JUnit before or alongside implementation.
+- Run `gradle test lint assembleDebug`; use Android Studio for device-specific
+  checks when the change requires them.

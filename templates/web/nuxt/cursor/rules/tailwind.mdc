@@ -1,0 +1,14 @@
+---
+description: Tailwind CSS styling conventions
+globs:
+  - "app/**/*.{vue,css}"
+  - "assets/**/*.css"
+---
+
+# Tailwind
+
+- Use Tailwind utilities in Vue templates.
+- Keep the Tailwind v4 import in `assets/css/main.css`.
+- Prefer semantic HTML, responsive utilities, and visible focus states.
+- Use class bindings for conditional styles.
+- Extract shared UI only after real reuse appears.

@@ -22,6 +22,134 @@ cleanup() {
 }
 trap cleanup EXIT
 
+have_tools() {
+  local tool
+  MISSING_TOOL=""
+  for tool in "$@"; do
+    if ! command -v "${tool}" >/dev/null 2>&1; then
+      MISSING_TOOL="${tool}"
+      return 1
+    fi
+  done
+}
+
+check_variant_manifest() {
+  local manifest="$1"
+  local stack="$2"
+  local variant="$3"
+  python3 - "${manifest}" "${stack}" "${variant}" <<'PY'
+import json
+import pathlib
+import sys
+
+path, stack, variant = sys.argv[1:]
+data = json.loads(pathlib.Path(path).read_text())
+if data.get("stack") != stack:
+    raise SystemExit(f"fail: {path} stack is {data.get('stack')!r}, want {stack!r}")
+if data.get("variant") != variant:
+    raise SystemExit(f"fail: {path} variant is {data.get('variant')!r}, want {variant!r}")
+PY
+}
+
+package_has_script() {
+  local dir="$1"
+  local script="$2"
+  node -e '
+    const pkg = require(process.argv[1]);
+    process.exit(pkg.scripts && pkg.scripts[process.argv[2]] ? 0 : 1);
+  ' "${dir}/package.json" "${script}"
+}
+
+run_package_checks() {
+  local dir="$1"
+  if package_has_script "${dir}" test; then
+    (cd "${dir}" && npm test)
+  fi
+  (cd "${dir}" && npm run build)
+}
+
+run_variant_checks() {
+  local stack="$1"
+  local variant="$2"
+  local dir="$3"
+
+  case "${stack}:${variant}" in
+    backend:go)
+      (cd "${dir}" && go test ./...)
+      ;;
+    backend:python)
+      (cd "${dir}" && uv run pytest)
+      ;;
+    backend:node-express|backend:node-fastify)
+      run_package_checks "${dir}"
+      ;;
+    backend:java)
+      (cd "${dir}" && mvn test)
+      ;;
+    web:*)
+      run_package_checks "${dir}"
+      ;;
+    app:flutter)
+      (cd "${dir}" && flutter analyze && flutter test)
+      ;;
+    app:react-pwa)
+      run_package_checks "${dir}"
+      ;;
+    app:ios)
+      (cd "${dir}" && swift test)
+      ;;
+    app:android)
+      if [[ -x "${dir}/gradlew" ]]; then
+        (cd "${dir}" && ./gradlew test)
+      else
+        (cd "${dir}" && gradle test)
+      fi
+      ;;
+    *)
+      echo "fail: no smoke command for ${stack}:${variant}"
+      return 1
+      ;;
+  esac
+}
+
+smoke_variant() {
+  local stack="$1"
+  local variant="$2"
+  local marker="$3"
+  local cursor_asset="$4"
+  shift 4
+  local name="variant-${stack}-${variant}"
+  local project="${WORKDIR}/${name}"
+  local stack_dir="${project}/${stack}"
+
+  printf '  %-8s %-14s ' "${stack}" "${variant}"
+  if ! have_tools "$@"; then
+    echo "skip (missing tool: ${MISSING_TOOL})"
+    return 0
+  fi
+
+  NO_COLOR=1 "${ARLOX}" create "${name}" "--${stack}=${variant}" >/dev/null
+  test -f "${stack_dir}/${marker}" || {
+    echo "fail: ${variant} marker ${marker} missing"
+    return 1
+  }
+  test -f "${stack_dir}/.origin-manifest.json" || {
+    echo "fail: ${variant} manifest missing"
+    return 1
+  }
+  check_variant_manifest "${stack_dir}/.origin-manifest.json" "${stack}" "${variant}"
+  test -f "${stack_dir}/${cursor_asset}" || {
+    echo "fail: ${variant} cursor asset ${cursor_asset} missing"
+    return 1
+  }
+  if ! run_variant_checks "${stack}" "${variant}" "${stack_dir}" >"${project}/smoke.log" 2>&1; then
+    echo "fail: ${variant} generated checks"
+    tail -n 40 "${project}/smoke.log"
+    return 1
+  fi
+  echo "ok"
+}
+
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║  arlox VERIFY — automated test only                          ║"
@@ -169,6 +297,33 @@ test -f "${DEMO}/web/.cursor/rules/tailwind.mdc"
 test -f "${DEMO}/backend/.cursor/skills/add-feature-backend/SKILL.md" || { echo "fail: backend add-feature skill missing"; exit 1; }
 test -f "${DEMO}/web/.cursor/skills/add-feature-web/SKILL.md" || { echo "fail: web add-feature skill missing"; exit 1; }
 test -f "${DEMO}/app/.cursor/skills/add-feature-mobile/learned/README.md" || { echo "fail: app add-feature skill missing"; exit 1; }
+echo "ok"
+
+echo ""
+echo "== 8. per-variant scaffold smoke =="
+cd "${WORKDIR}"
+BACKEND_CURSOR=".cursor/skills/add-feature-backend/SKILL.md"
+WEB_CURSOR=".cursor/skills/add-feature-web/SKILL.md"
+APP_CURSOR=".cursor/skills/add-feature-mobile/SKILL.md"
+
+smoke_variant backend go go.mod "${BACKEND_CURSOR}" go
+smoke_variant backend python pyproject.toml "${BACKEND_CURSOR}" uv
+smoke_variant backend node-express package.json "${BACKEND_CURSOR}" node npm
+smoke_variant backend node-fastify package.json "${BACKEND_CURSOR}" node npm
+smoke_variant backend java pom.xml "${BACKEND_CURSOR}" java mvn
+
+smoke_variant web react-vite package.json "${WEB_CURSOR}" node npm
+smoke_variant web nextjs package.json "${WEB_CURSOR}" node npm
+smoke_variant web vue package.json "${WEB_CURSOR}" node npm
+smoke_variant web svelte package.json "${WEB_CURSOR}" node npm
+smoke_variant web angular angular.json "${WEB_CURSOR}" node npm
+smoke_variant web nuxt package.json "${WEB_CURSOR}" node npm
+
+smoke_variant app flutter pubspec.yaml "${APP_CURSOR}" flutter
+smoke_variant app react-pwa package.json ".cursor/skills/add-feature-pwa/SKILL.md" node npm
+smoke_variant app ios Package.swift ".cursor/skills/add-feature-ios/SKILL.md" swift xcodebuild
+smoke_variant app android build.gradle.kts ".cursor/skills/add-feature-android/SKILL.md" gradle
+
 echo "ok"
 
 echo ""

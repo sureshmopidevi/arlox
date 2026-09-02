@@ -1,0 +1,13 @@
+# [[.Name]] Backend
+
+FastAPI, SQLAlchemy, and Alembic backend for [[.DisplayName]].
+
+```bash
+uv sync --extra dev
+cp .env.example .env
+uv run uvicorn app.main:app --reload
+```
+
+Run tests with `uv run pytest`. Create and apply migrations with
+`uv run alembic revision --autogenerate -m "change"` and
+`uv run alembic upgrade head`.

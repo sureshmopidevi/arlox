@@ -1,0 +1,11 @@
+---
+description: Python development tooling
+alwaysApply: true
+---
+
+# Tooling
+
+- Install dependencies with `uv sync --extra dev`.
+- Run locally with `uv run uvicorn app.main:app --reload`.
+- Run tests with `uv run pytest`.
+- Prefix Alembic commands with `uv run`; inspect generated migrations.

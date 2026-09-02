@@ -1,0 +1,23 @@
+import { ChangeDetectionStrategy, Component } from "@angular/core"
+
+@Component({
+  selector: "app-root",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <main>
+      <section>
+        <p>Angular</p>
+        <h1>[[.DisplayName]]</h1>
+        <span>Your TypeScript web app is ready.</span>
+      </section>
+    </main>
+  `,
+  styles: `
+    main { display: grid; min-height: 100vh; place-items: center; padding: 0 1.5rem; }
+    section { text-align: center; }
+    p { color: #fb7185; font-size: .875rem; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; }
+    h1 { margin: 1rem 0 .75rem; font-size: 2.25rem; }
+    span { color: #cbd5e1; }
+  `,
+})
+export class App {}

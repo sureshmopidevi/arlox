@@ -1,0 +1,19 @@
+---
+description: Persist Android architecture decisions
+alwaysApply: false
+---
+
+# Learning
+
+After a feature or significant fix, append a newest-first entry to
+`.cursor/skills/add-feature-android/learned/README.md`:
+
+```markdown
+## YYYY-MM-DD — <title>
+**What**: <change>
+**Why**: <reason>
+**Android tooling**: <Compose/Hilt/SDK impact>
+**Gotchas**: <non-obvious detail>
+```
+
+Prefix deliberately deferred work with `[PENDING]`.

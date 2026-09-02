@@ -1,0 +1,17 @@
+package [[.Org]].[[.Package]]
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+private class StubGreetingRepository : GreetingRepository {
+    override fun greeting() = "[[.DisplayName]] ready"
+}
+
+class HomeViewModelTest {
+    @Test
+    fun `repository greeting becomes initial state`() {
+        val subject = HomeViewModel(StubGreetingRepository())
+
+        assertEquals("[[.DisplayName]] ready", subject.state.value.greeting)
+    }
+}

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"text/template"
 
-	tmplfs "github.com/sureshmopidevi/arlox/templates"
 	"github.com/sureshmopidevi/arlox/internal/workspace"
+	tmplfs "github.com/sureshmopidevi/arlox/templates"
 )
 
 // Data holds the template variables for all stacks.
@@ -24,6 +24,7 @@ type Data struct {
 	Org          string
 	APIURL       string
 	ArloxVersion string
+	Variant      workspace.Variant
 }
 
 // HasTool reports whether name is available on PATH.
@@ -35,19 +36,13 @@ func HasTool(name string) bool {
 // Stack generates the given stack under root using embedded templates.
 // On fatal error during template scaffolding, the directory is cleaned up.
 // Non-fatal post-scaffold issues (e.g. offline package installs) return a warning string.
-func Stack(root string, stack workspace.Stack, data Data) (string, error) {
-	switch stack {
-	case workspace.Backend:
-		if !HasTool("go") {
-			return "", fmt.Errorf("go not found in PATH")
-		}
-	case workspace.Web:
-		if !HasTool("node") || !HasTool("npm") {
-			return "", fmt.Errorf("node and npm are required for the web stack")
-		}
-	case workspace.App:
-		if !HasTool("flutter") {
-			return "", fmt.Errorf("flutter not found in PATH")
+func Stack(root string, stack workspace.Stack, variant workspace.Variant, data Data) (string, error) {
+	if !workspace.ValidVariant(stack, variant) {
+		return "", fmt.Errorf("variant %q is not valid for the %s stack", variant, stack)
+	}
+	for _, tool := range requiredTools(variant) {
+		if !HasTool(tool) {
+			return "", fmt.Errorf("%s not found in PATH (required for %s)", tool, variant)
 		}
 	}
 
@@ -55,6 +50,7 @@ func Stack(root string, stack workspace.Stack, data Data) (string, error) {
 		return "", fmt.Errorf("git not found in PATH")
 	}
 
+	data.Variant = variant
 	stackName := string(stack)
 	stackDir := filepath.Join(root, stackName)
 
@@ -74,7 +70,7 @@ func Stack(root string, stack workspace.Stack, data Data) (string, error) {
 	}
 
 	// For Flutter: run flutter create first, then overlay our templates.
-	if stack == workspace.App {
+	if variant == workspace.Flutter {
 		cmd := exec.Command("flutter", "create",
 			"--org", data.Org,
 			"--project-name", data.Package,
@@ -85,11 +81,12 @@ func Stack(root string, stack workspace.Stack, data Data) (string, error) {
 		}
 	}
 
-	if err := renderTemplates(tmplfs.FS, stackName, stackDir, data); err != nil {
+	source := templateSourcePath(stack, variant)
+	if err := renderTemplates(tmplfs.FS, source, stackDir, data); err != nil {
 		return "", cleanup(err)
 	}
 
-	warn, err := finalizeStack(stack, stackDir, data)
+	warn, err := finalizeStack(variant, stackDir, data)
 	if err != nil {
 		return "", cleanup(err)
 	}
@@ -98,11 +95,39 @@ func Stack(root string, stack workspace.Stack, data Data) (string, error) {
 		return "", cleanup(fmt.Errorf("git init: %w", err))
 	}
 
-	if err := writeManifest(stackDir, stackName); err != nil {
+	if err := writeManifest(stackDir, stack, variant); err != nil {
 		return "", cleanup(err)
 	}
 
 	return warn, nil
+}
+
+func templateSourcePath(stack workspace.Stack, variant workspace.Variant) string {
+	return filepath.Join(string(stack), string(variant))
+}
+
+func requiredTools(variant workspace.Variant) []string {
+	switch variant {
+	case workspace.GoGin:
+		return []string{"go"}
+	case workspace.PyFastAPI:
+		return []string{"uv"}
+	case workspace.NodeExpress, workspace.NodeFastify,
+		workspace.ReactVite, workspace.NextJS, workspace.VueVite,
+		workspace.SvelteVite, workspace.Angular, workspace.Nuxt,
+		workspace.ReactPWA:
+		return []string{"node", "npm"}
+	case workspace.JavaSpring:
+		return []string{"java", "mvn"}
+	case workspace.Flutter:
+		return []string{"flutter"}
+	case workspace.NativeIOS:
+		return []string{"swift", "xcodebuild"}
+	case workspace.NativeAndroid:
+		return []string{"gradle"}
+	default:
+		return nil
+	}
 }
 
 // WorkspaceRoot renders workspace-level templates (README, .cursor, etc.) into root.
@@ -122,7 +147,11 @@ func UpdateSkills(root string, force bool) error {
 			continue
 		}
 		stackDir := filepath.Join(root, string(stack))
-		if err := updateCursorFromTemplate(stackDir, string(stack), "", force); err != nil {
+		variant, ok := workspace.DetectVariant(root, stack)
+		if !ok {
+			variant = workspace.DefaultVariant(stack)
+		}
+		if err := updateCursorFromTemplate(stackDir, templateSourcePath(stack, variant), "", force); err != nil {
 			return err
 		}
 	}
@@ -237,16 +266,19 @@ func locallyModified(localPath, templatePath string) bool {
 }
 
 type originManifest struct {
-	Stack  string            `json:"stack"`
-	Hashes map[string]string `json:"hashes"`
+	Stack   workspace.Stack   `json:"stack"`
+	Variant workspace.Variant `json:"variant"`
+	Hashes  map[string]string `json:"hashes"`
 }
 
-func writeManifest(dir, stack string) error {
+func writeManifest(dir string, stack workspace.Stack, variant workspace.Variant) error {
+	source := templateSourcePath(stack, variant)
 	m := originManifest{
-		Stack:  stack,
-		Hashes: make(map[string]string),
+		Stack:   stack,
+		Variant: variant,
+		Hashes:  make(map[string]string),
 	}
-	_ = fs.WalkDir(tmplfs.FS, stack, func(path string, d fs.DirEntry, err error) error {
+	_ = fs.WalkDir(tmplfs.FS, source, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
 		}
@@ -263,4 +295,16 @@ func writeManifest(dir, stack string) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(dir, ".origin-manifest.json"), data, 0o644)
+}
+
+func manifestVariant(dir string) workspace.Variant {
+	data, err := os.ReadFile(filepath.Join(dir, ".origin-manifest.json"))
+	if err != nil {
+		return ""
+	}
+	var manifest originManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return ""
+	}
+	return manifest.Variant
 }

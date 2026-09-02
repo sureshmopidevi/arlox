@@ -1,0 +1,12 @@
+---
+description: Surgical coding guidelines
+alwaysApply: true
+---
+
+# Karpathy Guidelines
+
+- State assumptions and success criteria before non-trivial changes.
+- Prefer the smallest implementation that meets the requirement.
+- Touch only files required by the task; match existing style.
+- Add or update a focused test, then run `mvn test`.
+- Ask when ambiguity would materially change the implementation.

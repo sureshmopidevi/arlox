@@ -1,0 +1,17 @@
+# [[.DisplayName]] Android app
+
+Native Android application using Kotlin, Jetpack Compose, Hilt, MVVM, and the
+repository pattern. It targets Android API 37.
+
+```bash
+gradle test
+gradle assembleDebug
+gradle installDebug
+```
+
+A Gradle wrapper is intentionally not included because generated wrapper JARs
+must come from a trusted Gradle installation. Run `gradle wrapper`, commit the
+resulting wrapper files, then use `./gradlew`. Requires JDK 17 and an Android
+SDK with API 37.
+
+Application ID: `[[.Org]].[[.Package]]`. API base: `[[.APIURL]]`.

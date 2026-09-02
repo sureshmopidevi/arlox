@@ -1,0 +1,12 @@
+---
+description: Express architecture constraints
+alwaysApply: true
+---
+
+# Architecture
+
+- Keep route handlers focused on HTTP validation and responses.
+- Put business logic in services and Prisma access in repositories.
+- Export the Express app separately from the listening server for tests.
+- Manage schema only through `prisma/schema.prisma` and migrations.
+- Do not add a second HTTP framework or ORM.

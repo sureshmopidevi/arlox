@@ -1,0 +1,17 @@
+# [[.DisplayName]] for iOS
+
+Compact SwiftUI app with MVVM, a repository boundary, Swift Package Manager,
+and XCTest.
+
+```bash
+swift test
+swift run
+```
+
+`swift run` launches the macOS SwiftUI host supplied by this package. SwiftPM
+can compile and test the shared code, but it does not create a signed iOS app,
+asset catalog, simulator scheme, or archive. For device/simulator distribution,
+open `Package.swift` in Xcode and embed `AppFeature` in an Xcode iOS app target
+with bundle identifier `[[.Org]].[[.Package]]`.
+
+API base: `[[.APIURL]]`

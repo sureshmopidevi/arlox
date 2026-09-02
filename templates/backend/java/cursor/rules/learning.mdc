@@ -1,0 +1,11 @@
+---
+description: Capture reusable backend learnings
+alwaysApply: true
+---
+
+# Learning
+
+After a feature passes tests, record its API contract in
+`.cursor/skills/add-feature-backend/learned/<feature>.md` and update the index.
+Stage proposed rule or skill corrections through the `learn` skill; keep
+feature-specific notes out of canonical instructions.

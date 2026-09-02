@@ -1,0 +1,14 @@
+---
+description: Kotlin, Gradle, and Android tooling requirements
+globs:
+  - "**/*.{kt,kts}"
+---
+
+# Tooling
+
+- Use JDK 17, Gradle 9.3+, and Android SDK API 37.
+- Run `gradle test lint assembleDebug` before finishing.
+- Generate a wrapper only with a trusted Gradle installation; commit all
+  generated wrapper files together.
+- Use Android Studio for Compose previews and emulator/device runs.
+- Never commit `local.properties`, build output, or IDE user state.

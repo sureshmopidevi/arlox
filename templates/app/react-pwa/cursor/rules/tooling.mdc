@@ -1,0 +1,14 @@
+---
+description: React PWA tooling requirements
+globs:
+  - "**/*.{ts,tsx,json}"
+---
+
+# Tooling
+
+- Use npm and commit the generated lockfile.
+- Use strict TypeScript; do not suppress errors with `any` or `@ts-ignore`.
+- Use Vitest with React Testing Library for behavior tests.
+- Run `npm test` and `npm run build` before finishing.
+- Verify production PWA behavior from `npm run preview`; dev mode is not proof
+  that the generated service worker works.

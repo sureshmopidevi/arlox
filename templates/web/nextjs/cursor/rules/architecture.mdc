@@ -1,0 +1,15 @@
+---
+description: Next.js App Router architecture
+globs:
+  - "app/**/*.{ts,tsx}"
+  - "components/**/*.{ts,tsx}"
+---
+
+# Architecture
+
+- Route UI, layouts, loading, and error boundaries belong in `app/`.
+- Reusable UI belongs in `components/`; feature logic stays beside its route until shared.
+- Prefer Server Components and server-side data access.
+- Isolate browser APIs and interactivity in small Client Components.
+- Use Route Handlers for HTTP endpoints and validate data at boundaries.
+- Keep tests next to the behavior they cover.

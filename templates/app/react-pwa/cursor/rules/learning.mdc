@@ -1,0 +1,21 @@
+---
+description: Persist React PWA project decisions
+alwaysApply: false
+---
+
+# Learning
+
+After a feature or significant fix, append a concise entry to
+`.cursor/skills/add-feature-pwa/learned/README.md`.
+
+Use:
+
+```markdown
+## YYYY-MM-DD — <title>
+**What**: <change>
+**Why**: <reason>
+**Offline**: <cache/install impact>
+**Gotchas**: <non-obvious detail>
+```
+
+Prefix deferred work with `[PENDING]`; never silently implement it later.

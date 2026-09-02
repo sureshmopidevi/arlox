@@ -1,0 +1,12 @@
+---
+description: FastAPI architecture constraints
+alwaysApply: true
+---
+
+# Architecture
+
+- Keep HTTP routes thin; put business logic in services.
+- Keep SQLAlchemy access in repository or persistence modules.
+- Define ORM models from `app.db.Base`; manage schema with Alembic.
+- Use FastAPI dependency injection for sessions and service dependencies.
+- Do not add a second web framework or ORM.

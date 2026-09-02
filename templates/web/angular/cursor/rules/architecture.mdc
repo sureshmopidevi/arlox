@@ -1,0 +1,14 @@
+---
+description: Angular application architecture
+globs:
+  - "src/**/*.ts"
+---
+
+# Architecture
+
+- Use standalone components and strict TypeScript.
+- Put feature UI and services in `src/app/features/<name>/`.
+- Keep components focused on presentation and orchestration.
+- Use typed injectable services for HTTP and persistence.
+- Prefer signals for local synchronous state and RxJS for async streams.
+- Keep tests beside the components and services they cover.
