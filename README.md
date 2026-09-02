@@ -76,6 +76,26 @@ arlox add --web vue
 
 See the [CLI reference](docs/cli-reference.md) for every value and flag.
 
+## Upgrade
+
+After installing with curl or `go install`:
+
+```bash
+arlox upgrade
+```
+
+This runs `go install github.com/sureshmopidevi/arlox/cmd/arlox@latest` — the same
+path as the curl installer. No local clone is required.
+
+If you develop arlox from a git checkout, `arlox upgrade` rebuilds from that
+source repo instead (and runs `git pull` unless you pass `--no-pull`).
+
+You can also re-run the curl installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sureshmopidevi/arlox/main/install.sh | bash
+```
+
 ## Generated workspace
 
 ```text

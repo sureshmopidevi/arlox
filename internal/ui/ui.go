@@ -184,6 +184,12 @@ func Dim(msg string) {
 	fmt.Println(render(styleMuted, msg))
 }
 
+// UpgradeAvailable prints a one-line upgrade notice to stderr.
+func UpgradeAvailable(current, latest string) {
+	fmt.Fprintf(os.Stderr, "\n  %s\n\n",
+		render(styleWarning, fmt.Sprintf("Update available! arlox %s → %s. Run `arlox upgrade` to update.", current, latest)))
+}
+
 func StackLabel(stack string) string {
 	return render(stackStyle(stack), stack)
 }

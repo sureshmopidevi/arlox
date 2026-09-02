@@ -15,6 +15,7 @@ import (
 )
 
 const arloxModule = "github.com/sureshmopidevi/arlox"
+const arloxInstallModule = arloxModule + "/cmd/arlox@latest"
 
 func upgradeCmd() *cobra.Command {
 	var (
@@ -23,23 +24,32 @@ func upgradeCmd() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "upgrade",
-		Short: "Update arlox from the local source repo and reinstall",
-		Long: `Rebuild and reinstall arlox from your local checkout.
+		Short: "Update arlox to the latest version",
+		Long: `Update arlox to the latest version.
 
-Looks for the source repo in this order:
+If a local source checkout is found, rebuilds from that repo (and runs
+git pull --ff-only unless --no-pull is set).
+
+Otherwise upgrades via:
+
+  go install github.com/sureshmopidevi/arlox/cmd/arlox@latest
+
+This is the same path used by the curl installer, so arlox upgrade works
+after a remote install with no local clone.
+
+Local source lookup order:
   1. --source <path>
   2. $ARLOX_HOME
-  3. current directory (if it is the arlox repo)
-  4. ~/arlox
-
-By default runs git pull --ff-only before building. Use --no-pull to skip.`,
+  3. ~/.config/arlox/source (saved by install.sh or a prior upgrade)
+  4. current directory (if it is the arlox repo)
+  5. ~/arlox`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUpgrade(source, !noPull)
 		},
 	}
-	cmd.Flags().BoolVar(&noPull, "no-pull", false, "skip git pull before building")
-	cmd.Flags().StringVar(&source, "source", "", "path to arlox source repo (default: $ARLOX_HOME or ~/arlox)")
+	cmd.Flags().BoolVar(&noPull, "no-pull", false, "skip git pull before building from a local source repo")
+	cmd.Flags().StringVar(&source, "source", "", "path to local arlox source repo")
 	return cmd
 }
 
@@ -52,12 +62,28 @@ func runUpgrade(sourceFlag string, pull bool) error {
 		return fmt.Errorf("go required")
 	}
 
-	root, err := findArloxSource(sourceFlag)
-	if err != nil {
-		ui.Error(err.Error())
-		return err
+	if sourceFlag != "" {
+		root, err := findArloxSource(sourceFlag)
+		if err != nil {
+			ui.Error(err.Error())
+			return err
+		}
+		return runLocalUpgrade(root, pull, before)
 	}
+
+	root, err := findArloxSource("")
+	if err != nil {
+		return runRemoteUpgrade(before)
+	}
+	return runLocalUpgrade(root, pull, before)
+}
+
+func runLocalUpgrade(root string, pull bool, before string) error {
 	ui.Dim("source  " + root)
+
+	if err := writeArloxSourceConfig(root); err != nil {
+		ui.Dim("note    could not save source path: " + err.Error())
+	}
 
 	if pull {
 		ui.Dim("git     pull --ff-only")
@@ -81,6 +107,19 @@ func runUpgrade(sourceFlag string, pull bool) error {
 		return err
 	}
 
+	return finishUpgrade(before)
+}
+
+func runRemoteUpgrade(before string) error {
+	ui.Dim("install go install " + arloxInstallModule)
+	if err := runInDir("", "go", "install", arloxInstallModule); err != nil {
+		ui.Error("install failed: " + err.Error())
+		return err
+	}
+	return finishUpgrade(before)
+}
+
+func finishUpgrade(before string) error {
 	after := installedVersion()
 	if after == "" {
 		after = "(unknown — run: arlox version)"
@@ -96,6 +135,9 @@ func findArloxSource(explicit string) (string, error) {
 		candidates = append(candidates, explicit)
 	}
 	if v := strings.TrimSpace(os.Getenv("ARLOX_HOME")); v != "" {
+		candidates = append(candidates, v)
+	}
+	if v := readArloxSourceConfig(); v != "" {
 		candidates = append(candidates, v)
 	}
 	if cwd, err := os.Getwd(); err == nil {
@@ -120,7 +162,42 @@ func findArloxSource(explicit string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("arlox source repo not found — set ARLOX_HOME or pass --source /path/to/arlox")
+	return "", fmt.Errorf("arlox source repo not found — run from the repo, set ARLOX_HOME, pass --source /path/to/arlox, or reinstall with ./install.sh")
+}
+
+func arloxSourceConfigFile() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".config", "arlox", "source"), nil
+}
+
+func readArloxSourceConfig() string {
+	path, err := arloxSourceConfigFile()
+	if err != nil {
+		return ""
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
+func writeArloxSourceConfig(root string) error {
+	path, err := arloxSourceConfigFile()
+	if err != nil {
+		return err
+	}
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(abs+"\n"), 0o644)
 }
 
 func isArloxRepo(dir string) bool {

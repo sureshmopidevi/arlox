@@ -30,9 +30,13 @@ if [[ -n "${SCRIPT_DIR}" && -f "${SCRIPT_DIR}/cmd/arlox/main.go" ]]; then
   echo "→ building from local source in ${SCRIPT_DIR}..."
   (cd "${SCRIPT_DIR}" && go build -o bin/arlox ./cmd/arlox)
   (cd "${SCRIPT_DIR}" && go install ./cmd/arlox)
+  mkdir -p "${HOME}/.config/arlox"
+  printf '%s\n' "${SCRIPT_DIR}" > "${HOME}/.config/arlox/source"
+  echo "→ saved source path for arlox upgrade"
 else
   echo "→ installing latest release via go install..."
   go install github.com/sureshmopidevi/arlox/cmd/arlox@latest
+  echo "→ upgrade later with: arlox upgrade"
 fi
 
 if [[ ! -x "${INSTALLED}" ]]; then

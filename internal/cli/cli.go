@@ -44,6 +44,9 @@ func buildRoot() *cobra.Command {
 		Short:   "Scaffold and manage multi-stack workspaces",
 		Long:    "arlox create workspaces with backend, web, and/or Flutter stacks plus Cursor rules and skills.",
 		Version: version.Version,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			maybeShowUpgradeNotice(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
@@ -231,9 +234,9 @@ func promptStacks(available []workspace.Stack) ([]workspace.Stack, error) {
 	}
 
 	labels := map[workspace.Stack]string{
-		workspace.Backend: "backend   Go + Gin API",
-		workspace.Web:     "web       Vite + React + Tailwind",
-		workspace.App:     "app       Flutter (Material home)",
+		workspace.Backend: "backend",
+		workspace.Web:     "web",
+		workspace.App:     "app",
 	}
 
 	opts := make([]huh.Option[string], 0, len(available))
@@ -411,6 +414,12 @@ type generateOpts struct {
 // runGenerate is the shared orchestration for create and add: select stacks,
 // generate them, sync the workspace file, and print the summary.
 func runGenerate(root, name string, f stackFlags, opts generateOpts) error {
+	if stop, err := offerUpgradeBeforeGenerate(); err != nil {
+		return err
+	} else if stop {
+		return nil
+	}
+
 	data := buildData(name, f)
 	missing := workspace.ListMissingStacks(root)
 

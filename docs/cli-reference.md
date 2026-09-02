@@ -66,7 +66,20 @@ arlox skills update --force
 arlox repair
 arlox repair --force
 arlox doctor
-arlox upgrade [--source <path>] [--no-pull]
+arlox upgrade [--no-pull]       # go install @latest, or rebuild local clone if found
+arlox upgrade --source <path>   # force upgrade from a local checkout
 arlox uninstall [--yes]
 arlox version
 ```
+
+### `arlox upgrade`
+
+Works for both install paths:
+
+- **curl / `go install` users:** no local clone needed. Runs
+  `go install github.com/sureshmopidevi/arlox/cmd/arlox@latest`.
+- **Local clone users:** when a source repo is found (`~/arlox`, saved config,
+  or current directory), runs `git pull --ff-only` (unless `--no-pull`), then
+  rebuilds and reinstalls from that checkout.
+
+Use `--source <path>` to force a specific local checkout.
