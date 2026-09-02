@@ -38,6 +38,10 @@ func TestWriteWorkspaceFileNeverNullFolders(t *testing.T) {
 	if wf.Folders[0].Path != "." || wf.Folders[0].Name != "demo" {
 		t.Fatalf("expected root folder name=demo path=., got %+v", wf.Folders[0])
 	}
+	exclude, ok := wf.Folders[0].Settings["files.exclude"].(map[string]any)
+	if !ok || exclude["backend"] != true || exclude["web"] != true || exclude["app"] != true {
+		t.Fatalf("expected root folder to hide stack dirs, got settings=%+v", wf.Folders[0].Settings)
+	}
 }
 
 func TestSyncWorkspaceFolders(t *testing.T) {
@@ -90,6 +94,15 @@ func TestSyncWorkspaceFolders(t *testing.T) {
 	for path, name := range want {
 		if paths[path] != name {
 			t.Fatalf("folder %s: want name %q, got %q", path, name, paths[path])
+		}
+	}
+	for _, f := range wf.Folders {
+		if f.Path != "." {
+			continue
+		}
+		exclude, ok := f.Settings["files.exclude"].(map[string]any)
+		if !ok || exclude["backend"] != true {
+			t.Fatalf("expected synced root folder to hide stacks, got settings=%+v", f.Settings)
 		}
 	}
 }

@@ -100,8 +100,9 @@ type workspaceFile struct {
 }
 
 type workspaceFolder struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
+	Name     string         `json:"name"`
+	Path     string         `json:"path"`
+	Settings map[string]any `json:"settings,omitempty"`
 }
 
 type workspaceExts struct {
@@ -240,10 +241,7 @@ func WriteWorkspaceFile(path, name string, folders []string) error {
 		},
 	}
 	for _, f := range folders {
-		wf.Folders = append(wf.Folders, workspaceFolder{
-			Name: FolderDisplayName(name, f),
-			Path: f,
-		})
+		wf.Folders = append(wf.Folders, makeWorkspaceFolder(name, f))
 	}
 	data, err := json.MarshalIndent(wf, "", "  ")
 	if err != nil {
@@ -264,6 +262,27 @@ func FolderDisplayName(projectName, path string) string {
 	default:
 		return path
 	}
+}
+
+func rootFolderSettings() map[string]any {
+	return map[string]any{
+		"files.exclude": map[string]any{
+			"backend": true,
+			"web":     true,
+			"app":     true,
+		},
+	}
+}
+
+func makeWorkspaceFolder(projectName, path string) workspaceFolder {
+	folder := workspaceFolder{
+		Name: FolderDisplayName(projectName, path),
+		Path: path,
+	}
+	if path == "." || path == "" {
+		folder.Settings = rootFolderSettings()
+	}
+	return folder
 }
 
 // ReadWorkspaceFolders returns the folder paths listed in the workspace file.
@@ -321,13 +340,13 @@ func MergeWorkspaceFolders(wsPath string, newFolders []string) error {
 	for i, f := range wf.Folders {
 		seen[f.Path] = true
 		wf.Folders[i].Name = FolderDisplayName(rootName, f.Path)
+		if f.Path == "." || f.Path == "" {
+			wf.Folders[i].Settings = rootFolderSettings()
+		}
 	}
 	for _, f := range newFolders {
 		if !seen[f] {
-			wf.Folders = append(wf.Folders, workspaceFolder{
-				Name: FolderDisplayName(rootName, f),
-				Path: f,
-			})
+			wf.Folders = append(wf.Folders, makeWorkspaceFolder(rootName, f))
 			seen[f] = true
 		}
 	}
