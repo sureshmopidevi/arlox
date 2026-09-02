@@ -52,18 +52,33 @@ echo "version: ${GOT_VERSION} ok"
 mkdir -p "${WORKDIR}"
 cd "${WORKDIR}"
 
+HAS_FLUTTER=false
+if command -v flutter >/dev/null 2>&1; then
+  HAS_FLUTTER=true
+fi
+
+CREATE_STACK_FLAGS=(--backend --web --web-ui tailwind)
+if [[ "${HAS_FLUTTER}" == "true" ]]; then
+  CREATE_STACK_FLAGS+=(--app)
+else
+  echo "note: flutter not on PATH — verify skips app stack (CI-safe)"
+fi
+
 echo ""
 echo "== 1. create all stacks =="
-NO_COLOR=1 "${ARLOX}" create demo --backend --web --app --web-ui tailwind
+NO_COLOR=1 "${ARLOX}" create demo "${CREATE_STACK_FLAGS[@]}"
 
 test -f "${DEMO}/backend/go.mod" || { echo "fail: backend missing"; exit 1; }
 test -f "${DEMO}/backend/go.sum" || { echo "fail: backend go.sum missing"; exit 1; }
 test -f "${DEMO}/web/package.json" || { echo "fail: web missing"; exit 1; }
 test -d "${DEMO}/web/node_modules" || { echo "fail: web node_modules missing"; exit 1; }
-test -f "${DEMO}/app/pubspec.yaml" || { echo "fail: app missing"; exit 1; }
+if [[ "${HAS_FLUTTER}" == "true" ]]; then
+  test -f "${DEMO}/app/pubspec.yaml" || { echo "fail: app missing"; exit 1; }
+fi
 test -f "${DEMO}/demo.code-workspace" || { echo "fail: workspace missing"; exit 1; }
 python3 - <<PY
 import json, pathlib, sys
+has_flutter = "${HAS_FLUTTER}" == "true"
 ws = pathlib.Path("${DEMO}/demo.code-workspace")
 data = json.loads(ws.read_text())
 folders = data.get("folders")
@@ -73,22 +88,30 @@ paths = {f["path"] for f in folders}
 names = {f["path"]: f["name"] for f in folders}
 if "." not in paths:
     sys.exit("fail: workspace missing root folder path '.'")
-if not {"backend", "web", "app"}.issubset(paths):
+required = {"backend", "web"}
+if has_flutter:
+    required.add("app")
+if not required.issubset(paths):
     sys.exit(f"fail: missing stack folders in {paths}")
-for path, want in {".": "demo", "backend": "demo-backend", "web": "demo-web", "app": "demo-app"}.items():
+want_names = {".": "demo", "backend": "demo-backend", "web": "demo-web"}
+if has_flutter:
+    want_names["app"] = "demo-app"
+for path, want in want_names.items():
     if names.get(path) != want:
         sys.exit(f"fail: folder {path} name want {want!r}, got {names.get(path)!r}")
 PY
 # project identity stamped into each stack
 grep -q '^module github.com/example/demo-backend$' "${DEMO}/backend/go.mod" || { echo "fail: backend module name"; exit 1; }
 grep -q '"name": "demo"' "${DEMO}/web/package.json" || { echo "fail: web package name"; exit 1; }
-grep -q '^name: demo$' "${DEMO}/app/pubspec.yaml" || { echo "fail: app package name"; exit 1; }
+if [[ "${HAS_FLUTTER}" == "true" ]]; then
+  grep -q '^name: demo$' "${DEMO}/app/pubspec.yaml" || { echo "fail: app package name"; exit 1; }
+  test -f "${DEMO}/app/.dart_tool/package_config.json" || { echo "fail: app pub get missing"; exit 1; }
+fi
 grep -q 'APP_NAME=Demo' "${DEMO}/backend/configs/local/app.env.example" || { echo "fail: backend APP_NAME"; exit 1; }
 test -f "${DEMO}/backend/configs/local/app.env" || { echo "fail: backend app.env missing"; exit 1; }
 test -f "${DEMO}/web/.arlox/design-system.json" || { echo "fail: web design-system manifest missing"; exit 1; }
 grep -q '"id": "tailwind"' "${DEMO}/web/.arlox/design-system.json" || { echo "fail: web design system id"; exit 1; }
 test -f "${DEMO}/web/.env" || { echo "fail: web .env missing"; exit 1; }
-test -f "${DEMO}/app/.dart_tool/package_config.json" || { echo "fail: app pub get missing"; exit 1; }
 test -f "${DEMO}/Makefile" || { echo "fail: root Makefile missing"; exit 1; }
 test -f "${DEMO}/docker-compose.yml" || { echo "fail: docker-compose.yml missing"; exit 1; }
 DB_PORT="$(grep '^DB_PORT=' "${DEMO}/backend/configs/local/app.env.example" | cut -d= -f2 | tr -d '[:space:]')"
@@ -105,9 +128,15 @@ echo "ok"
 echo ""
 echo "== 1a. stack-aware naming =="
 NAME_DEMO="${WORKDIR}/name-demo"
-NO_COLOR=1 "${ARLOX}" create name-demo --backend --web --app --web-ui tailwind --out "${WORKDIR}" >/dev/null
+NAME_CREATE_FLAGS=(--backend --web --web-ui tailwind --out "${WORKDIR}")
+if [[ "${HAS_FLUTTER}" == "true" ]]; then
+  NAME_CREATE_FLAGS+=(--app)
+fi
+NO_COLOR=1 "${ARLOX}" create name-demo "${NAME_CREATE_FLAGS[@]}" >/dev/null
 grep -q '"name": "name-demo"' "${NAME_DEMO}/web/package.json" || { echo "fail: web kebab package name"; exit 1; }
-grep -q '^name: name_demo$' "${NAME_DEMO}/app/pubspec.yaml" || { echo "fail: flutter snake name"; exit 1; }
+if [[ "${HAS_FLUTTER}" == "true" ]]; then
+  grep -q '^name: name_demo$' "${NAME_DEMO}/app/pubspec.yaml" || { echo "fail: flutter snake name"; exit 1; }
+fi
 grep -q '^DB_NAME=name_demo$' "${NAME_DEMO}/backend/configs/local/app.env.example" || { echo "fail: postgres snake db name"; exit 1; }
 grep -q 'POSTGRES_DB: name_demo' "${NAME_DEMO}/docker-compose.yml" || { echo "fail: docker postgres db name"; exit 1; }
 grep -q '"snake": "name_demo"' "${NAME_DEMO}/.arlox/project.json" || { echo "fail: project.json snake"; exit 1; }
@@ -135,7 +164,7 @@ echo "ok"
 
 echo ""
 echo "== 2. no duplicates =="
-OUT="$(NO_COLOR=1 "${ARLOX}" create demo --backend --web --app --web-ui tailwind 2>&1)"
+OUT="$(NO_COLOR=1 "${ARLOX}" create demo "${CREATE_STACK_FLAGS[@]}" 2>&1)"
 echo "${OUT}" | grep -q "skipped (already exists)" || { echo "fail: expected skip"; echo "${OUT}"; exit 1; }
 echo "ok"
 
@@ -149,7 +178,7 @@ data = json.loads(ws.read_text())
 data["folders"] = [f for f in data["folders"] if f["path"] != "web"]
 ws.write_text(json.dumps(data, indent=2) + "\n")
 PY
-NO_COLOR=1 "${ARLOX}" create demo --backend --web --app --web-ui tailwind >/dev/null
+NO_COLOR=1 "${ARLOX}" create demo "${CREATE_STACK_FLAGS[@]}" >/dev/null
 python3 - <<PY
 import json, pathlib, sys
 ws = pathlib.Path("${DEMO}/demo.code-workspace")
@@ -210,7 +239,7 @@ echo "ok"
 
 echo ""
 echo "== 6. flutter analyze =="
-if ! command -v flutter >/dev/null 2>&1; then
+if [[ "${HAS_FLUTTER}" != "true" ]]; then
   echo "skip (flutter not on PATH)"
 else
   cd "${DEMO}/app"
@@ -225,7 +254,9 @@ test -f "${DEMO}/backend/.cursor/rules/karpathy.mdc"
 test -f "${DEMO}/web/.cursor/rules/design-system.mdc" || { echo "fail: web design-system rule missing"; exit 1; }
 test -f "${DEMO}/backend/.cursor/skills/add-feature-backend/SKILL.md" || { echo "fail: backend add-feature skill missing"; exit 1; }
 test -f "${DEMO}/web/.cursor/skills/add-feature-web/SKILL.md" || { echo "fail: web add-feature skill missing"; exit 1; }
-test -f "${DEMO}/app/.cursor/skills/add-feature-mobile/learned/README.md" || { echo "fail: app add-feature skill missing"; exit 1; }
+if [[ "${HAS_FLUTTER}" == "true" ]]; then
+  test -f "${DEMO}/app/.cursor/skills/add-feature-mobile/learned/README.md" || { echo "fail: app add-feature skill missing"; exit 1; }
+fi
 echo "ok"
 
 echo ""
